@@ -1,0 +1,6 @@
+.env
+create_admin.py
+create_tables.py
+direct_admin_setup.py
+setup_database.py
+verify_tables.py
