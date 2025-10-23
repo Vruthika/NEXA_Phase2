@@ -5,12 +5,14 @@ from datetime import datetime
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models.models import Admin, Customer, Transaction
+from app.models.models import Admin, Customer, Plan, Transaction
 from app.schemas.admin import *
 from app.core.auth import get_current_admin
 from app.crud import crud_admin, crud_category, crud_plan
 from app.schemas.category import CategoryCreate, CategoryResponse
 from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
+from app.schemas.offer import OfferCreate, OfferResponse, OfferStatus, OfferUpdate
+from app.crud import crud_offer
 
 # ==========================================================
 # 🧑‍💼 ADMIN MANAGEMENT ROUTES
@@ -205,6 +207,232 @@ async def delete_plan(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
     return {"message": "Plan deleted successfully"}
 
+# ==========================================================
+# 🎁 OFFER MANAGEMENT ROUTES
+# ==========================================================
+offer_router = APIRouter(prefix="/offers", tags=["Offer Management"])
+
+@offer_router.post("/", response_model=OfferResponse)
+async def create_offer(
+    offer_data: OfferCreate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    # Check if plan exists
+    plan = db.query(Plan).filter(Plan.plan_id == offer_data.plan_id).first()
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    
+    # Check if discounted price is valid
+    if offer_data.discounted_price >= plan.price:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Discounted price must be less than original plan price"
+        )
+    
+    offer = crud_offer.create(db, offer_data)
+    if not offer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create offer"
+        )
+    
+    # Calculate and add status to response
+    offer_status = crud_offer.calculate_offer_status(offer)
+    
+    # Create response data with proper date formatting
+    response_data = {
+        "offer_id": offer.offer_id,
+        "plan_id": offer.plan_id,
+        "offer_name": offer.offer_name,
+        "description": offer.description,
+        "discounted_price": float(offer.discounted_price),
+        "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+        "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+        "status": offer_status,
+        "created_at": offer.created_at
+    }
+    
+    return OfferResponse(**response_data)
+
+@offer_router.get("/", response_model=List[OfferResponse])
+async def get_offers(
+    plan_id: Optional[int] = Query(None, description="Filter by plan"),
+    status: Optional[str] = Query(None, description="Filter by status (active/inactive/expired)"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    offers = crud_offer.get_all(db, plan_id=plan_id, status=status)
+    
+    # Add status to each offer and format dates
+    response_offers = []
+    for offer in offers:
+        offer_status = crud_offer.calculate_offer_status(offer)
+        response_data = {
+            "offer_id": offer.offer_id,
+            "plan_id": offer.plan_id,
+            "offer_name": offer.offer_name,
+            "description": offer.description,
+            "discounted_price": float(offer.discounted_price),
+            "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+            "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+            "status": offer_status,
+            "created_at": offer.created_at
+        }
+        response_offers.append(OfferResponse(**response_data))
+    
+    return response_offers
+
+@offer_router.get("/active", response_model=List[OfferResponse])
+async def get_active_offers(
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    offers = crud_offer.get_active_offers(db)
+    
+    # Format dates for response
+    response_offers = []
+    for offer in offers:
+        response_data = {
+            "offer_id": offer.offer_id,
+            "plan_id": offer.plan_id,
+            "offer_name": offer.offer_name,
+            "description": offer.description,
+            "discounted_price": float(offer.discounted_price),
+            "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+            "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+            "status": OfferStatus.active,
+            "created_at": offer.created_at
+        }
+        response_offers.append(OfferResponse(**response_data))
+    
+    return response_offers
+
+@offer_router.get("/{offer_id}", response_model=OfferResponse)
+async def get_offer(
+    offer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    offer = crud_offer.get(db, offer_id)
+    if not offer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Offer not found"
+        )
+    
+    # Calculate and add status to response
+    offer_status = crud_offer.calculate_offer_status(offer)
+    response_data = {
+        "offer_id": offer.offer_id,
+        "plan_id": offer.plan_id,
+        "offer_name": offer.offer_name,
+        "description": offer.description,
+        "discounted_price": float(offer.discounted_price),
+        "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+        "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+        "status": offer_status,
+        "created_at": offer.created_at
+    }
+    
+    return OfferResponse(**response_data)
+
+@offer_router.get("/plan/{plan_id}", response_model=List[OfferResponse])
+async def get_offers_by_plan(
+    plan_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    # Check if plan exists
+    plan = db.query(Plan).filter(Plan.plan_id == plan_id).first()
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    
+    offers = crud_offer.get_by_plan(db, plan_id)
+    
+    # Add status to each offer and format dates
+    response_offers = []
+    for offer in offers:
+        offer_status = crud_offer.calculate_offer_status(offer)
+        response_data = {
+            "offer_id": offer.offer_id,
+            "plan_id": offer.plan_id,
+            "offer_name": offer.offer_name,
+            "description": offer.description,
+            "discounted_price": float(offer.discounted_price),
+            "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+            "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+            "status": offer_status,
+            "created_at": offer.created_at
+        }
+        response_offers.append(OfferResponse(**response_data))
+    
+    return response_offers
+
+@offer_router.put("/{offer_id}", response_model=OfferResponse)
+async def update_offer(
+    offer_id: int,
+    offer_data: OfferUpdate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    offer = crud_offer.update(db, offer_id, offer_data)
+    if not offer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Offer not found"
+        )
+    
+    # Calculate and add status to response
+    offer_status = crud_offer.calculate_offer_status(offer)
+    response_data = {
+        "offer_id": offer.offer_id,
+        "plan_id": offer.plan_id,
+        "offer_name": offer.offer_name,
+        "description": offer.description,
+        "discounted_price": float(offer.discounted_price),
+        "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+        "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+        "status": offer_status,
+        "created_at": offer.created_at
+    }
+    
+    return OfferResponse(**response_data)
+
+# @offer_router.get("/{offer_id}/discount-percentage")
+# async def get_discount_percentage(
+#     offer_id: int,
+#     current_admin: Admin = Depends(get_current_admin),
+#     db: Session = Depends(get_db)
+# ):
+#     discount = crud_offer.calculate_discount_percentage(db, offer_id)
+#     if discount is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Offer or plan not found"
+#         )
+#     return {"discount_percentage": discount}
+
+@offer_router.delete("/{offer_id}")
+async def delete_offer(
+    offer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    offer = crud_offer.delete(db, offer_id)
+    if not offer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Offer not found"
+        )
+    return {"message": "Offer deleted successfully"}
+
 
 # ==========================================================
 # 📊 DASHBOARD ANALYTICS ROUTES
@@ -237,3 +465,4 @@ async def get_dashboard_stats(
         "todays_transactions": todays_transactions,
         "total_revenue": total_revenue
     }
+    

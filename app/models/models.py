@@ -205,6 +205,8 @@ class Offer(Base):
 
     offer_id = Column(BigInteger, primary_key=True, autoincrement=True)
     plan_id = Column(BigInteger, ForeignKey("plans.plan_id"), nullable=False)
+    offer_name = Column(String(255), nullable=False)
+    description = Column(Text)
     discounted_price = Column(DECIMAL(10, 2), nullable=False)
     valid_from = Column(DateTime, nullable=False)
     valid_until = Column(DateTime, nullable=False)

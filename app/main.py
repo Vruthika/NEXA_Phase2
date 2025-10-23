@@ -29,6 +29,7 @@ app.include_router(auth.router)
 app.include_router(admin.admin_router)
 app.include_router(admin.category_router)
 app.include_router(admin.plan_router)
+app.include_router(admin.offer_router)
 app.include_router(admin.dashboard_router)
 
 @app.get("/")
