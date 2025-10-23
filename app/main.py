@@ -4,14 +4,8 @@ from app.database import engine, Base
 from app.config import settings
 from app.routes import admin, auth
 
-# Import ALL models explicitly to ensure they are registered
-from app.models.models import (
-    Admin, Customer, Category, Plan, Offer, Transaction, 
-    Subscription, SubscriptionActivationQueue, ActiveTopup,
-    LinkedAccount, PostpaidActivation, PostpaidSecondaryNumber,
-    PostpaidDataAddon, ReferralProgram, ReferralDiscount,
-    ReferralUsageLog, Notification, Backup, Restore
-)
+# Import models to ensure they are registered with SQLAlchemy
+from app.models import models
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -49,17 +43,9 @@ async def health_check():
 @app.on_event("startup")
 async def startup_event():
     try:
-        # Drop all tables first (for development only)
-        # Base.metadata.drop_all(bind=engine)
-        # print("🗑️  Dropped all tables")
-        
-        # Create all tables
+        # Create tables
         Base.metadata.create_all(bind=engine)
-        print(f"✅ Database tables created successfully for {settings.APP_NAME}")
-        
-        # Wait a moment to ensure tables are created
-        import time
-        time.sleep(1)
+        print(f"✅ Database tables created for {settings.APP_NAME}")
         
         # Create default admin if not exists
         from app.database import SessionLocal
@@ -67,16 +53,6 @@ async def startup_event():
         
         db = SessionLocal()
         try:
-            # First, let's check if admins table exists by counting
-            try:
-                admin_count = db.query(Admin).count()
-                print(f"📊 Found {admin_count} admins in database")
-            except Exception as e:
-                print(f"❌ Error querying admins table: {e}")
-                # If table doesn't exist, create it manually
-                Base.metadata.create_all(bind=engine, tables=[Admin.__table__])
-                print("✅ Created admins table manually")
-            
             admin_user = crud_admin.get_by_email(db, settings.ADMIN_DEFAULT_EMAIL)
             if not admin_user:
                 from app.schemas.admin import AdminCreate
@@ -91,20 +67,12 @@ async def startup_event():
             else:
                 print(f"✅ Default admin already exists: {admin_user.email}")
         except Exception as e:
-            print(f"❌ Error creating default admin: {e}")
-            # Try to create the admin table specifically
-            try:
-                Base.metadata.create_all(bind=engine, tables=[Admin.__table__])
-                print("✅ Created admins table after error")
-            except Exception as table_error:
-                print(f"❌ Failed to create admins table: {table_error}")
+            print(f"❌ Error with admin: {e}")
         finally:
             db.close()
             
     except Exception as e:
         print(f"❌ Startup error: {e}")
-        import traceback
-        traceback.print_exc()
 
 if __name__ == "__main__":
     import uvicorn

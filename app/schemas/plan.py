@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 class PlanBase(BaseModel):
     category_id: int
@@ -14,7 +14,7 @@ class PlanBase(BaseModel):
     daily_data_limit_gb: Optional[float] = None
     talktime_allowance_minutes: Optional[int] = None
     sms_allowance: Optional[int] = None
-    benefits: Optional[dict] = None
+    benefits: Optional[List[str]] = None 
     is_featured: bool = False
 
 class PlanCreate(PlanBase):
@@ -29,7 +29,7 @@ class PlanCreate(PlanBase):
     daily_data_limit_gb: Optional[float] = None
     talktime_allowance_minutes: Optional[int] = None
     sms_allowance: Optional[int] = None
-    benefits: Optional[dict] = None
+    benefits: Optional[List[str]] = None
     is_featured: bool = False
 
 class PlanUpdate(BaseModel):
@@ -44,7 +44,7 @@ class PlanUpdate(BaseModel):
     daily_data_limit_gb: Optional[float] = None
     talktime_allowance_minutes: Optional[int] = None
     sms_allowance: Optional[int] = None
-    benefits: Optional[dict] = None
+    benefits: Optional[List[str]] = None
     is_featured: Optional[bool] = None
     status: Optional[str] = None
 
@@ -61,7 +61,7 @@ class PlanResponse(PlanBase):
     daily_data_limit_gb: Optional[float]
     talktime_allowance_minutes: Optional[int]
     sms_allowance: Optional[int]
-    benefits: Optional[dict]
+    benefits: Optional[List[str]] = None
     is_featured: bool
     status: str
     created_at: Optional[datetime] = None  # Make optional

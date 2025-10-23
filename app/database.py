@@ -7,7 +7,7 @@ from app.config import settings
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,  # Check connection before using
-    echo=True  # Enable SQL logging to see what's happening
+    # echo=True  # Enable SQL logging to see what's happening
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

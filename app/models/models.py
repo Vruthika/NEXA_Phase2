@@ -17,8 +17,8 @@ class AccountStatus(str, enum.Enum):
     suspended = "suspended"
 
 class PlanType(str, enum.Enum):
-    prepaid = "prepaid"
-    postpaid = "postpaid"
+    prepaid = "Prepaid"
+    postpaid = "Postpaid"
 
 class PlanStatus(str, enum.Enum):
     active = "active"
