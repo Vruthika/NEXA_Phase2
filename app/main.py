@@ -32,51 +32,6 @@ app.include_router(admin.plan_router)
 app.include_router(admin.offer_router)
 app.include_router(admin.dashboard_router)
 
-@app.get("/")
-async def root():
-    return {
-        "message": "Welcome to NEXA Mobile Recharge System",
-        "version": settings.APP_VERSION,
-        "environment": settings.ENVIRONMENT
-    }
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "service": settings.APP_NAME}
-
-@app.on_event("startup")
-async def startup_event():
-    try:
-        # Create tables
-        Base.metadata.create_all(bind=engine)
-        print(f"✅ Database tables created for {settings.APP_NAME}")
-        
-        # Create default admin if not exists
-        from app.database import SessionLocal
-        from app.crud.crud_admin import crud_admin
-        
-        db = SessionLocal()
-        try:
-            admin_user = crud_admin.get_by_email(db, settings.ADMIN_DEFAULT_EMAIL)
-            if not admin_user:
-                from app.schemas.admin import AdminCreate
-                default_admin = AdminCreate(
-                    name=settings.ADMIN_DEFAULT_NAME,
-                    phone_number=settings.ADMIN_DEFAULT_PHONE,
-                    email=settings.ADMIN_DEFAULT_EMAIL,
-                    password=settings.ADMIN_DEFAULT_PASSWORD
-                )
-                created_admin = crud_admin.create(db, default_admin)
-                print(f"✅ Default admin created: {created_admin.email}")
-            else:
-                print(f"✅ Default admin already exists: {admin_user.email}")
-        except Exception as e:
-            print(f"❌ Error with admin: {e}")
-        finally:
-            db.close()
-            
-    except Exception as e:
-        print(f"❌ Startup error: {e}")
 
 if __name__ == "__main__":
     import uvicorn

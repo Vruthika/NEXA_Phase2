@@ -11,7 +11,7 @@ from app.core.auth import get_current_admin
 from app.crud import crud_admin, crud_category, crud_plan
 from app.schemas.category import CategoryCreate, CategoryResponse
 from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
-from app.schemas.offer import OfferCreate, OfferResponse, OfferStatus, OfferUpdate
+from app.schemas.offer import DiscountCalculationResponse, OfferCreate, OfferCreateWithDiscount, OfferResponse, OfferStatus, OfferUpdate
 from app.crud import crud_offer
 
 # ==========================================================
@@ -212,12 +212,16 @@ async def delete_plan(
 # ==========================================================
 offer_router = APIRouter(prefix="/offers", tags=["Offer Management"])
 
+# CREATE OFFER - Direct Price Method
 @offer_router.post("/", response_model=OfferResponse)
 async def create_offer(
     offer_data: OfferCreate,
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Create a new offer by specifying discounted price directly.
+    """
     # Check if plan exists
     plan = db.query(Plan).filter(Plan.plan_id == offer_data.plan_id).first()
     if not plan:
@@ -258,14 +262,92 @@ async def create_offer(
     
     return OfferResponse(**response_data)
 
+# CREATE OFFER - Discount Percentage Method
+@offer_router.post("/create-with-discount", response_model=OfferResponse)
+async def create_offer_with_discount(
+    offer_data: OfferCreateWithDiscount,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Create an offer by specifying discount percentage.
+    The system automatically calculates the discounted price.
+    """
+    # Check if plan exists
+    plan = db.query(Plan).filter(Plan.plan_id == offer_data.plan_id).first()
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    
+    # Create offer with discount percentage
+    offer = crud_offer.create_with_discount_percentage(db, offer_data)
+    if not offer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create offer with discount percentage"
+        )
+    
+    # Calculate and add status to response
+    offer_status = crud_offer.calculate_offer_status(offer)
+    
+    # Create response data with proper date formatting
+    response_data = {
+        "offer_id": offer.offer_id,
+        "plan_id": offer.plan_id,
+        "offer_name": offer.offer_name,
+        "description": offer.description,
+        "discounted_price": float(offer.discounted_price),
+        "valid_from": offer.valid_from.strftime('%d.%m.%Y %H:%M'),
+        "valid_until": offer.valid_until.strftime('%d.%m.%Y %H:%M'),
+        "status": offer_status,
+        "created_at": offer.created_at
+    }
+    
+    return OfferResponse(**response_data)
+
+# CALCULATE DISCOUNT - Preview Only
+@offer_router.get("/calculate-discount", response_model=DiscountCalculationResponse)
+async def calculate_discount(
+    plan_id: int = Query(..., description="Plan ID"),
+    discount_percentage: float = Query(..., description="Discount percentage (0-100)"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Calculate discount details without creating an offer.
+    Useful for previewing the discount before creating the offer.
+    """
+    if discount_percentage <= 0 or discount_percentage >= 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Discount percentage must be between 0 and 100"
+        )
+    
+    discount_details = crud_offer.calculate_discount_details(db, plan_id, discount_percentage)
+    if not discount_details:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found or invalid discount percentage"
+        )
+    
+    return DiscountCalculationResponse(**discount_details)
+
+# GET ALL OFFERS
 @offer_router.get("/", response_model=List[OfferResponse])
 async def get_offers(
     plan_id: Optional[int] = Query(None, description="Filter by plan"),
     status: Optional[str] = Query(None, description="Filter by status (active/inactive/expired)"),
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(100, description="Limit records"),
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    offers = crud_offer.get_all(db, plan_id=plan_id, status=status)
+    """
+    Get all offers with optional filtering by plan and status.
+    """
+    offers = crud_offer.get_all(db, plan_id=plan_id, status=status, skip=skip, limit=limit)
     
     # Add status to each offer and format dates
     response_offers = []
@@ -286,11 +368,15 @@ async def get_offers(
     
     return response_offers
 
+# GET ACTIVE OFFERS
 @offer_router.get("/active", response_model=List[OfferResponse])
 async def get_active_offers(
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Get all currently active offers (valid_from <= current_time <= valid_until).
+    """
     offers = crud_offer.get_active_offers(db)
     
     # Format dates for response
@@ -311,12 +397,16 @@ async def get_active_offers(
     
     return response_offers
 
+# GET OFFER BY ID
 @offer_router.get("/{offer_id}", response_model=OfferResponse)
 async def get_offer(
     offer_id: int,
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Get a specific offer by ID.
+    """
     offer = crud_offer.get(db, offer_id)
     if not offer:
         raise HTTPException(
@@ -340,12 +430,16 @@ async def get_offer(
     
     return OfferResponse(**response_data)
 
+# GET OFFERS BY PLAN
 @offer_router.get("/plan/{plan_id}", response_model=List[OfferResponse])
 async def get_offers_by_plan(
     plan_id: int,
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Get all offers for a specific plan.
+    """
     # Check if plan exists
     plan = db.query(Plan).filter(Plan.plan_id == plan_id).first()
     if not plan:
@@ -375,6 +469,7 @@ async def get_offers_by_plan(
     
     return response_offers
 
+# UPDATE OFFER
 @offer_router.put("/{offer_id}", response_model=OfferResponse)
 async def update_offer(
     offer_id: int,
@@ -382,6 +477,9 @@ async def update_offer(
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Update an existing offer.
+    """
     offer = crud_offer.update(db, offer_id, offer_data)
     if not offer:
         raise HTTPException(
@@ -405,12 +503,16 @@ async def update_offer(
     
     return OfferResponse(**response_data)
 
+# GET DISCOUNT PERCENTAGE FOR EXISTING OFFER
 # @offer_router.get("/{offer_id}/discount-percentage")
 # async def get_discount_percentage(
 #     offer_id: int,
 #     current_admin: Admin = Depends(get_current_admin),
 #     db: Session = Depends(get_db)
 # ):
+#     """
+#     Get the discount percentage for an existing offer.
+#     """
 #     discount = crud_offer.calculate_discount_percentage(db, offer_id)
 #     if discount is None:
 #         raise HTTPException(
@@ -419,12 +521,16 @@ async def update_offer(
 #         )
 #     return {"discount_percentage": discount}
 
+# DELETE OFFER
 @offer_router.delete("/{offer_id}")
 async def delete_offer(
     offer_id: int,
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Delete an offer.
+    """
     offer = crud_offer.delete(db, offer_id)
     if not offer:
         raise HTTPException(
@@ -432,7 +538,6 @@ async def delete_offer(
             detail="Offer not found"
         )
     return {"message": "Offer deleted successfully"}
-
 
 # ==========================================================
 # 📊 DASHBOARD ANALYTICS ROUTES
@@ -465,4 +570,3 @@ async def get_dashboard_stats(
         "todays_transactions": todays_transactions,
         "total_revenue": total_revenue
     }
-    
