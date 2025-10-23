@@ -4,6 +4,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, declarative_base
 import enum
+from datetime import datetime  
+
 
 Base = declarative_base()
 
@@ -99,8 +101,8 @@ class Customer(Base):
     days_inactive = Column(Integer, default=0)
     inactivity_status_updated_at = Column(DateTime)
     deleted_at = Column(DateTime)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=func.now())  # Change back
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())  # Change back
     
     # Relationships
     transactions = relationship("Transaction", back_populates="customer")
@@ -148,8 +150,8 @@ class Admin(Base):
     phone_number = Column(String(20), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=func.now())  # Change back
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())  # Change back
     
     # Relationships
     backups = relationship("Backup", back_populates="admin")
@@ -465,7 +467,7 @@ class Backup(Base):
     __tablename__ = "backup"
 
     backup_id = Column(BigInteger, primary_key=True, autoincrement=True)
-    admin_id = Column(BigInteger, ForeignKey("admins.admin_id"), nullable=False)
+    admin_id = Column(BigInteger, ForeignKey("admins.admin_id"), nullable=False)  # Fixed to "admins"
     file_name = Column(String(255), nullable=False)
     path = Column(String(500), nullable=False)
     type = Column(String(20), CheckConstraint("type IN ('auto', 'manual')"))
@@ -480,7 +482,7 @@ class Restore(Base):
     __tablename__ = "restore"
 
     restore_id = Column(BigInteger, primary_key=True, autoincrement=True)
-    admin_id = Column(BigInteger, ForeignKey("admins.admin_id"), nullable=False)
+    admin_id = Column(BigInteger, ForeignKey("admins.admin_id"), nullable=False)  # Fixed to "admins"
     file_name = Column(String(255), nullable=False)
     path = Column(String(500), nullable=False)
     type = Column(String(20), CheckConstraint("type IN ('auto', 'manual')"))

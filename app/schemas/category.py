@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -5,11 +6,13 @@ class CategoryBase(BaseModel):
     category_name: str
 
 class CategoryCreate(CategoryBase):
-    pass
+    category_name: str
 
 class CategoryResponse(CategoryBase):
     category_id: int
-    created_at: datetime
-    
+    category_name: str
+
+    created_at: Optional[datetime] = None  # Make optional
+
     class Config:
         from_attributes = True

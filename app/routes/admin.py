@@ -1,93 +1,226 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
+from sqlalchemy import func
 
-from app.core.database import get_db
-from app.core.auth import get_password_hash, verify_token, create_access_token
-from app.models.user import User
-from app.schemas.user import UserCreateAdmin, UserResponse
+from app.database import get_db
+from app.models.models import Admin, Customer, Transaction  # Import all required models
+from app.schemas.admin import *
+from app.core.auth import get_current_admin
+from app.crud import crud_admin, crud_category, crud_plan
+from app.schemas.category import CategoryCreate, CategoryResponse
+from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-# Dependency to check if user is admin
-def get_current_admin(token: str = Depends(verify_token), db: Session = Depends(get_db)):
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    
-    user_email = token.get("sub")
-    user = db.query(User).filter(User.email == user_email).first()
-    
-    if not user or not user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    
-    return user
-
-@router.post("/register", response_model=UserResponse)
-def register_admin(
-    user_data: UserCreateAdmin,
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+# Admin Management
+@router.post("/admins", response_model=AdminResponse)
+async def create_admin(
+    admin_data: AdminCreate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
 ):
-    """
-    Register a new admin user (only accessible by existing admins)
-    """
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
+    existing_admin = crud_admin.get_by_email(db, admin_data.email)
+    if existing_admin:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
-    # Create new admin user
-    hashed_password = get_password_hash(user_data.password)
-    admin_user = User(
-        email=user_data.email,
-        hashed_password=hashed_password,
-        full_name=user_data.full_name,
-        is_admin=True
-    )
-    
-    db.add(admin_user)
-    db.commit()
-    db.refresh(admin_user)
-    
-    return admin_user
+    return crud_admin.create(db, admin_data)
 
-@router.get("/users", response_model=List[UserResponse])
-def get_all_users(
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+@router.get("/admins", response_model=List[AdminResponse])
+async def get_all_admins(
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
 ):
-    """
-    Get all users (admin only)
-    """
-    users = db.query(User).all()
-    return users
+    return crud_admin.get_all(db)
 
-@router.post("/users/{user_id}/toggle-active")
-def toggle_user_active(
-    user_id: int,
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+@router.get("/admins/{admin_id}", response_model=AdminResponse)
+async def get_admin(
+    admin_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
 ):
-    """
-    Toggle user active status (admin only)
-    """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    admin = crud_admin.get_by_id(db, admin_id)
+    if not admin:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="Admin not found"
+        )
+    return admin
+
+@router.put("/admins/{admin_id}", response_model=AdminResponse)
+async def update_admin(
+    admin_id: int,
+    admin_data: AdminUpdate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    admin = crud_admin.update(db, admin_id, admin_data)
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin not found"
+        )
+    return admin
+
+@router.post("/change-password")
+async def change_password(
+    password_data: AdminChangePassword,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    # Verify current password
+    if not crud_admin.authenticate(db, current_admin.email, password_data.current_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
         )
     
-    user.is_active = not user.is_active
-    db.commit()
+    crud_admin.change_password(db, current_admin.admin_id, password_data.new_password)
+    return {"message": "Password changed successfully"}
+
+# Category Management
+@router.post("/categories", response_model=CategoryResponse)
+async def create_category(
+    category_data: CategoryCreate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    return crud_category.create(db, category_data)
+
+@router.get("/categories", response_model=List[CategoryResponse])
+async def get_categories(
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    return crud_category.get_all(db)
+
+@router.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(
+    category_id: int,
+    category_data: CategoryCreate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    category = crud_category.update(db, category_id, category_data.category_name)
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+    return category
+
+@router.delete("/categories/{category_id}")
+async def delete_category(
+    category_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    category = crud_category.delete(db, category_id)
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+    return {"message": "Category deleted successfully"}
+
+# Plan Management
+@router.post("/plans", response_model=PlanResponse)
+async def create_plan(
+    plan_data: PlanCreate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    return crud_plan.create(db, plan_data)
+
+@router.get("/plans", response_model=List[PlanResponse])
+async def get_plans(
+    plan_type: Optional[str] = Query(None, description="Filter by plan type"),
+    category_id: Optional[int] = Query(None, description="Filter by category"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    return crud_plan.get_all(db, plan_type=plan_type, category_id=category_id)
+
+@router.get("/plans/{plan_id}", response_model=PlanResponse)
+async def get_plan(
+    plan_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    plan = crud_plan.get(db, plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    return plan
+
+@router.put("/plans/{plan_id}", response_model=PlanResponse)
+async def update_plan(
+    plan_id: int,
+    plan_data: PlanUpdate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    plan = crud_plan.update(db, plan_id, plan_data)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    return plan
+
+@router.delete("/plans/{plan_id}")
+async def delete_plan(
+    plan_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    plan = crud_plan.delete(db, plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plan not found"
+        )
+    return {"message": "Plan deleted successfully"}
+
+# Dashboard Analytics
+@router.get("/dashboard")
+async def get_dashboard_stats(
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    # Total customers
+    total_customers = db.query(Customer).count()
     
-    return {"message": f"User active status set to {user.is_active}"}
+    # Active customers
+    active_customers = db.query(Customer).filter(
+        Customer.account_status == "active"
+    ).count()
+    
+    # Total transactions
+    total_transactions = db.query(Transaction).count()
+    
+    # Today's transactions
+    today = datetime.utcnow().date()
+    todays_transactions = db.query(Transaction).filter(
+        func.date(Transaction.transaction_date) == today
+    ).count()
+    
+    # Total revenue
+    total_revenue_result = db.query(func.sum(Transaction.final_amount)).filter(
+        Transaction.payment_status == "success"
+    ).first()
+    total_revenue = float(total_revenue_result[0]) if total_revenue_result[0] else 0.0
+    
+    return {
+        "total_customers": total_customers,
+        "active_customers": active_customers,
+        "total_transactions": total_transactions,
+        "todays_transactions": todays_transactions,
+        "total_revenue": total_revenue
+    }
