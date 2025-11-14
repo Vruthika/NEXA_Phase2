@@ -21,7 +21,6 @@ router = APIRouter(prefix="/customer", tags=["Customer Operations"])
 # ==========================================================
 
 @router.get("/profile", response_model=CustomerProfileResponse)
-@router.get("/profile", response_model=CustomerProfileResponse)
 async def get_customer_profile(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
@@ -363,48 +362,6 @@ async def get_customer_transaction(
 # ==========================================================
 # 📱 SUBSCRIPTION MANAGEMENT
 # ==========================================================
-'''
-@router.get("/subscriptions", response_model=List[CustomerSubscriptionResponse])
-async def get_customer_subscriptions(
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get customer's active and expired subscriptions.
-    """
-    from app.services.subscription_service import subscription_service
-    
-    # Process expired subscriptions before returning data
-    subscription_service.process_expired_subscriptions(db)
-    
-    # Get all subscriptions for the customer
-    subscriptions = db.query(Subscription).join(
-        Plan, Subscription.plan_id == Plan.plan_id
-    ).filter(
-        Subscription.customer_id == current_customer.customer_id
-    ).order_by(Subscription.created_at.desc()).offset(skip).limit(limit).all()
-    
-    response_subscriptions = []
-    for subscription in subscriptions:
-        status = "active" if subscription.expiry_date and subscription.expiry_date > datetime.utcnow() else "expired"
-        
-        response_subscriptions.append(CustomerSubscriptionResponse(
-            subscription_id=subscription.subscription_id,
-            plan_name=subscription.plan.plan_name,
-            phone_number=subscription.phone_number,
-            is_topup=subscription.is_topup,
-            activation_date=subscription.activation_date,
-            expiry_date=subscription.expiry_date,
-            data_balance_gb=float(subscription.data_balance_gb) if subscription.data_balance_gb else None,
-            daily_data_limit_gb=float(subscription.daily_data_limit_gb) if subscription.daily_data_limit_gb else None,
-            daily_data_used_gb=float(subscription.daily_data_used_gb) if subscription.daily_data_used_gb else None,
-            status=status
-        ))
-    
-    return response_subscriptions
-'''
 
 @router.get("/subscriptions/active", response_model=List[CustomerSubscriptionResponse])
 async def get_customer_active_subscriptions(
@@ -420,7 +377,11 @@ async def get_customer_active_subscriptions(
     subscription_service.process_expired_subscriptions(db)
     
     current_time = datetime.utcnow()
-
+    
+    # Only get subscriptions that are:
+    # 1. Activated (activation_date is not null)
+    # 2. Not expired (expiry_date > current_time)
+    # 3. Currently active (activation_date <= current_time <= expiry_date)
     subscriptions = db.query(Subscription).join(
         Plan, Subscription.plan_id == Plan.plan_id
     ).filter(
@@ -446,6 +407,7 @@ async def get_customer_active_subscriptions(
         ))
     
     return response_subscriptions
+
 @router.get("/subscriptions/queue", response_model=List[CustomerQueueResponse])
 async def get_customer_queued_subscriptions(
     current_customer: Customer = Depends(get_current_customer),
@@ -459,13 +421,14 @@ async def get_customer_queued_subscriptions(
     # Process expired subscriptions before returning data
     subscription_service.process_expired_subscriptions(db)
     
+    # Only get unprocessed queue items
     queue_items = db.query(SubscriptionActivationQueue).join(
         Subscription, SubscriptionActivationQueue.subscription_id == Subscription.subscription_id
     ).join(
         Plan, Subscription.plan_id == Plan.plan_id
     ).filter(
         SubscriptionActivationQueue.customer_id == current_customer.customer_id,
-        SubscriptionActivationQueue.processed_at.is_(None)
+        SubscriptionActivationQueue.processed_at.is_(None)  # Only unprocessed items
     ).order_by(SubscriptionActivationQueue.queue_position).all()
     
     response_queue = []
@@ -563,8 +526,40 @@ async def create_recharge(
         Subscription.expiry_date > current_time
     ).order_by(Subscription.expiry_date.desc()).all()
     
-    if not active_subscriptions:
-        # No active subscription - activate immediately
+    # Handle topup plans differently - they should always activate immediately
+    if plan.is_topup:
+        # For topup plans, activate immediately regardless of existing subscriptions
+        activation_date = current_time
+        expiry_date = current_time + timedelta(days=plan.validity_days)
+        
+        subscription = Subscription(
+            customer_id=current_customer.customer_id,
+            phone_number=recharge_data.recipient_phone_number,
+            plan_id=recharge_data.plan_id,
+            transaction_id=transaction.transaction_id,
+            is_topup=plan.is_topup,
+            activation_date=activation_date,
+            expiry_date=expiry_date,
+            data_balance_gb=float(plan.data_allowance_gb) if plan.data_allowance_gb else None,
+            daily_data_limit_gb=float(plan.daily_data_limit_gb) if plan.daily_data_limit_gb else None,
+            daily_data_used_gb=0.0,
+            last_daily_reset=current_time
+        )
+        
+        db.add(subscription)
+        db.commit()
+        db.refresh(subscription)
+        
+        # Update customer's last_active_plan_date
+        current_customer.last_active_plan_date = current_time
+        current_customer.days_inactive = 0
+        current_customer.inactivity_status_updated_at = current_time
+        db.commit()
+        
+        message = "Topup recharge successful! Your data has been added to your account."
+        
+    elif not active_subscriptions:
+        # No active subscription - activate immediately for regular plans
         activation_date = current_time
         expiry_date = current_time + timedelta(days=plan.validity_days)
         
@@ -595,7 +590,7 @@ async def create_recharge(
         message = "Recharge successful! Your plan is now active."
         
     else:
-        # Active subscription exists - calculate activation date based on current active plan's expiry
+        # Active subscription exists for regular plans - add to queue
         latest_active_subscription = active_subscriptions[0]  # Get the one with latest expiry
         activation_date = latest_active_subscription.expiry_date
         expiry_date = activation_date + timedelta(days=plan.validity_days)

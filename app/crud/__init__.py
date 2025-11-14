@@ -1,4 +1,3 @@
-# app/crud/__init__.py
 from .crud_admin import crud_admin
 from .crud_category import crud_category
 from .crud_customer import crud_customer

@@ -635,19 +635,6 @@ async def get_transaction(
     
     return TransactionResponse(**response_data)
 
-"""
-@transaction_router.get("/stats/revenue")
-async def get_revenue_stats(
-    days: int = Query(30, description="Number of days to analyze"),
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    
-    #Get revenue statistics for the specified period.
-    
-    return crud_transaction.get_revenue_stats(db, days=days)
-"""
-
 @transaction_router.post("/export")
 async def export_transactions(
     export_request: TransactionExportRequest,
@@ -790,7 +777,15 @@ async def get_activation_queue(
     """
     Get the subscription activation queue.
     """
-    queue_items = crud_subscription.get_activation_queue(db, customer_id=customer_id)
+    # Only get unprocessed queue items
+    query = db.query(SubscriptionActivationQueue).filter(
+        SubscriptionActivationQueue.processed_at.is_(None)  # Only unprocessed items
+    )
+    
+    if customer_id:
+        query = query.filter(SubscriptionActivationQueue.customer_id == customer_id)
+    
+    queue_items = query.order_by(SubscriptionActivationQueue.queue_position).all()
     
     enhanced_queue = []
     for item in queue_items:
@@ -813,75 +808,6 @@ async def get_activation_queue(
         })
     
     return enhanced_queue
-
-@subscription_router.post("/{subscription_id}/force-activate")
-async def force_activate_subscription(
-    subscription_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Force activate a subscription (admin override).
-    """
-    subscription = crud_subscription.force_activate_subscription(db, subscription_id)
-    if not subscription:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Subscription not found"
-        )
-    
-    return {"message": "Subscription activated successfully", "subscription_id": subscription_id}
-
-@subscription_router.post("/{subscription_id}/force-deactivate")
-async def force_deactivate_subscription(
-    subscription_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Force deactivate a subscription (admin override).
-    """
-    subscription = crud_subscription.force_deactivate_subscription(db, subscription_id)
-    if not subscription:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Subscription not found"
-        )
-    
-    return {"message": "Subscription deactivated successfully", "subscription_id": subscription_id}
-
-@subscription_router.delete("/queue/{queue_id}")
-async def remove_from_queue(
-    queue_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Remove an item from the activation queue.
-    """
-    success = crud_subscription.remove_from_queue(db, queue_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Queue item not found"
-        )
-    
-    return {"message": "Item removed from queue successfully", "queue_id": queue_id}
-
-@subscription_router.post("/queue/process/{customer_id}")
-async def process_customer_queue(
-    customer_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Manually process the activation queue for a customer.
-    """
-    subscription = crud_subscription.process_queue(db, customer_id)
-    if subscription:
-        return {"message": "Queue processed successfully", "activated_subscription_id": subscription.subscription_id}
-    else:
-        return {"message": "No items in queue to process"}
 
 
 # ==========================================================
@@ -1098,25 +1024,6 @@ async def get_customer_queued_subscriptions(
     
     return enhanced_queue
 
-@customer_router.put("/{customer_id}")
-async def update_customer(
-    customer_id: int,
-    customer_update: CustomerUpdate,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Update customer information.
-    """
-    customer = crud_customer.update_customer(db, customer_id, customer_update)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    return {"message": "Customer updated successfully", "customer_id": customer_id}
-
 @customer_router.post("/{customer_id}/deactivate")
 async def deactivate_customer(
     customer_id: int,
@@ -1134,43 +1041,6 @@ async def deactivate_customer(
         )
     
     return {"message": "Customer account deactivated successfully", "customer_id": customer_id}
-
-@customer_router.post("/{customer_id}/activate")
-async def activate_customer(
-    customer_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Activate a customer account.
-    """
-    customer = crud_customer.activate_account(db, customer_id)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    return {"message": "Customer account activated successfully", "customer_id": customer_id}
-
-@customer_router.post("/{customer_id}/suspend")
-async def suspend_customer(
-    customer_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Suspend a customer account.
-    """
-    customer = crud_customer.suspend_account(db, customer_id)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    return {"message": "Customer account suspended successfully", "customer_id": customer_id}
-
 
 # ==========================================================
 # 📊 DASHBOARD ANALYTICS ROUTES

@@ -25,7 +25,6 @@ def get_current_admin(
     if admin_id is None:
         raise credentials_exception
     
-    # Verify it's actually an admin ID
     try:
         admin_id_int = int(admin_id)
     except (ValueError, TypeError):
@@ -55,7 +54,6 @@ def get_current_customer(
     if customer_id is None:
         raise credentials_exception
     
-    # Verify it's actually a customer ID
     try:
         customer_id_int = int(customer_id)
     except (ValueError, TypeError):
