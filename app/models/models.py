@@ -140,7 +140,17 @@ class Customer(Base):
     
     # Postpaid secondary numbers relationship
     postpaid_secondary_numbers = relationship("PostpaidSecondaryNumber", back_populates="customer")
-
+    
+    @property
+    def should_update_last_active_date(self):
+        """Check if we should update last_active_plan_date"""
+        from datetime import datetime
+        if not self.last_active_plan_date:
+            return True
+        
+        # Update if current date is different from last active date
+        return self.last_active_plan_date.date() != datetime.utcnow().date()
+    
 
 class Admin(Base):
     __tablename__ = "admins"
@@ -251,7 +261,7 @@ class Subscription(Base):
     plan_id = Column(BigInteger, ForeignKey("plans.plan_id"), nullable=False)
     transaction_id = Column(BigInteger, ForeignKey("transactions.transaction_id"), nullable=False)
     is_topup = Column(Boolean, default=False)
-    activation_date = Column(DateTime, nullable=False)
+    activation_date = Column(DateTime, nullable=True)
     expiry_date = Column(DateTime, nullable=False)
     data_balance_gb = Column(DECIMAL(5, 2))
     daily_data_limit_gb = Column(DECIMAL(5, 2))
@@ -265,8 +275,6 @@ class Subscription(Base):
     transaction = relationship("Transaction", back_populates="subscription")
     activation_queue = relationship("SubscriptionActivationQueue", back_populates="subscription", uselist=False)
     active_topups = relationship("ActiveTopup", back_populates="base_subscription")
-
-
 class SubscriptionActivationQueue(Base):
     __tablename__ = "subscription_activation_queue"
 

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models.models import Admin, Customer, Plan, Transaction
+from app.models.models import Admin, Customer, Offer, Plan, Transaction
 from app.schemas.admin import *
 from app.core.auth import get_current_admin
 from app.crud import crud_admin, crud_category, crud_plan
@@ -13,6 +13,16 @@ from app.schemas.category import CategoryCreate, CategoryResponse
 from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
 from app.schemas.offer import DiscountCalculationResponse, OfferCreate, OfferCreateWithDiscount, OfferResponse, OfferStatus, OfferUpdate
 from app.crud import crud_offer
+from app.schemas.transaction import TransactionResponse, TransactionFilter, TransactionExportRequest
+from app.crud import crud_transaction, crud_subscription
+from app.models.models import Subscription, SubscriptionActivationQueue
+from app.schemas.customer import CustomerResponse, CustomerDetailResponse, CustomerUpdate, CustomerFilter, CustomerStatsResponse
+from app.crud import crud_customer
+from app.models.models import AccountStatus
+
+import csv
+import io
+import json
 
 # ==========================================================
 # 🧑‍💼 ADMIN MANAGEMENT ROUTES
@@ -503,24 +513,6 @@ async def update_offer(
     
     return OfferResponse(**response_data)
 
-# GET DISCOUNT PERCENTAGE FOR EXISTING OFFER
-# @offer_router.get("/{offer_id}/discount-percentage")
-# async def get_discount_percentage(
-#     offer_id: int,
-#     current_admin: Admin = Depends(get_current_admin),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Get the discount percentage for an existing offer.
-#     """
-#     discount = crud_offer.calculate_discount_percentage(db, offer_id)
-#     if discount is None:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Offer or plan not found"
-#         )
-#     return {"discount_percentage": discount}
-
 # DELETE OFFER
 @offer_router.delete("/{offer_id}")
 async def delete_offer(
@@ -538,6 +530,647 @@ async def delete_offer(
             detail="Offer not found"
         )
     return {"message": "Offer deleted successfully"}
+
+
+# ==========================================================
+# 💳 TRANSACTION MONITORING ROUTES
+# ==========================================================
+transaction_router = APIRouter(prefix="/transactions", tags=["Transaction Monitoring"])
+
+@transaction_router.get("/", response_model=List[TransactionResponse])
+async def get_transactions(
+    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    customer_phone: Optional[str] = Query(None, description="Filter by customer phone"),
+    plan_id: Optional[int] = Query(None, description="Filter by plan"),
+    transaction_type: Optional[str] = Query(None, description="Filter by transaction type"),
+    payment_status: Optional[str] = Query(None, description="Filter by payment status"),
+    payment_method: Optional[str] = Query(None, description="Filter by payment method"),
+    date_from: Optional[datetime] = Query(None, description="Filter from date"),
+    date_to: Optional[datetime] = Query(None, description="Filter to date"),
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(100, description="Limit records"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all transactions with filtering options.
+    """
+    filter_params = TransactionFilter(
+        customer_id=customer_id,
+        customer_phone=customer_phone,
+        plan_id=plan_id,
+        transaction_type=transaction_type,
+        payment_status=payment_status,
+        payment_method=payment_method,
+        date_from=date_from,
+        date_to=date_to
+    )
+    
+    transactions_with_details = crud_transaction.get_all_with_details(
+        db, filter=filter_params, skip=skip, limit=limit
+    )
+    
+    response_transactions = []
+    for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
+        response_data = {
+            "transaction_id": transaction.transaction_id,
+            "customer_id": transaction.customer_id,
+            "plan_id": transaction.plan_id,
+            "offer_id": transaction.offer_id,
+            "recipient_phone_number": transaction.recipient_phone_number,
+            "transaction_type": transaction.transaction_type,
+            "original_amount": float(transaction.original_amount),
+            "discount_amount": float(transaction.discount_amount),
+            "discount_type": transaction.discount_type,
+            "final_amount": float(transaction.final_amount),
+            "payment_method": transaction.payment_method,
+            "payment_status": transaction.payment_status,
+            "transaction_date": transaction.transaction_date,
+            "customer_name": cust_name,
+            "customer_phone": cust_phone,
+            "plan_name": plan_name,
+            "offer_name": offer_name
+        }
+        response_transactions.append(TransactionResponse(**response_data))
+    
+    return response_transactions
+
+@transaction_router.get("/{transaction_id}", response_model=TransactionResponse)
+async def get_transaction(
+    transaction_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed information about a specific transaction.
+    """
+    transaction_data = crud_transaction.get_with_details(db, transaction_id)
+    if not transaction_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found"
+        )
+    
+    transaction, cust_name, cust_phone, plan_name, offer_name = transaction_data
+    
+    response_data = {
+        "transaction_id": transaction.transaction_id,
+        "customer_id": transaction.customer_id,
+        "plan_id": transaction.plan_id,
+        "offer_id": transaction.offer_id,
+        "recipient_phone_number": transaction.recipient_phone_number,
+        "transaction_type": transaction.transaction_type,
+        "original_amount": float(transaction.original_amount),
+        "discount_amount": float(transaction.discount_amount),
+        "discount_type": transaction.discount_type,
+        "final_amount": float(transaction.final_amount),
+        "payment_method": transaction.payment_method,
+        "payment_status": transaction.payment_status,
+        "transaction_date": transaction.transaction_date,
+        "customer_name": cust_name,
+        "customer_phone": cust_phone,
+        "plan_name": plan_name,
+        "offer_name": offer_name
+    }
+    
+    return TransactionResponse(**response_data)
+
+"""
+@transaction_router.get("/stats/revenue")
+async def get_revenue_stats(
+    days: int = Query(30, description="Number of days to analyze"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    
+    #Get revenue statistics for the specified period.
+    
+    return crud_transaction.get_revenue_stats(db, days=days)
+"""
+
+@transaction_router.post("/export")
+async def export_transactions(
+    export_request: TransactionExportRequest,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Export transactions in CSV or JSON format.
+    """
+    transactions_with_details = crud_transaction.get_all_with_details(
+        db, filter=export_request, skip=0, limit=10000  # Increased limit for export
+    )
+    
+    if export_request.export_format.lower() == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            "Transaction ID", "Customer", "Customer Phone", "Plan", "Offer",
+            "Transaction Type", "Original Amount", "Discount", "Final Amount",
+            "Payment Method", "Payment Status", "Transaction Date"
+        ])
+        
+        # Write data
+        for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
+            writer.writerow([
+                transaction.transaction_id,
+                cust_name or "",
+                cust_phone or "",
+                plan_name or "",
+                offer_name or "",
+                transaction.transaction_type.value,
+                float(transaction.original_amount),
+                float(transaction.discount_amount),
+                float(transaction.final_amount),
+                transaction.payment_method.value,
+                transaction.payment_status.value,
+                transaction.transaction_date.isoformat()
+            ])
+        
+        content = output.getvalue()
+        output.close()
+        
+        return Response(
+            content=content,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=transactions_export.csv"}
+        )
+    
+    elif export_request.export_format.lower() == "json":
+        transactions_list = []
+        for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
+            transactions_list.append({
+                "transaction_id": transaction.transaction_id,
+                "customer_name": cust_name,
+                "customer_phone": cust_phone,
+                "plan_name": plan_name,
+                "offer_name": offer_name,
+                "transaction_type": transaction.transaction_type.value,
+                "original_amount": float(transaction.original_amount),
+                "discount_amount": float(transaction.discount_amount),
+                "final_amount": float(transaction.final_amount),
+                "payment_method": transaction.payment_method.value,
+                "payment_status": transaction.payment_status.value,
+                "transaction_date": transaction.transaction_date.isoformat()
+            })
+        
+        content = json.dumps(transactions_list, indent=2)
+        
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=transactions_export.json"}
+        )
+    
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported export format. Use 'csv' or 'json'."
+        )
+
+# ==========================================================
+# 📱 SUBSCRIPTION MANAGEMENT ROUTES
+# ==========================================================
+subscription_router = APIRouter(prefix="/subscriptions", tags=["Subscription Management"])
+
+@subscription_router.get("/active")
+async def get_active_subscriptions(
+    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all active subscriptions (only currently active ones).
+    """
+    current_time = datetime.utcnow()
+    
+    query = db.query(Subscription).filter(
+        Subscription.activation_date.isnot(None),  # Must be activated
+        Subscription.activation_date <= current_time,  # Activation date has passed
+        Subscription.expiry_date > current_time  # Not expired yet
+    )
+    
+    if customer_id:
+        query = query.filter(Subscription.customer_id == customer_id)
+    
+    subscriptions = query.all()
+    
+    # Enhance with customer and plan details
+    enhanced_subscriptions = []
+    for subscription in subscriptions:
+        customer = db.query(Customer).filter(Customer.customer_id == subscription.customer_id).first()
+        plan = db.query(Plan).filter(Plan.plan_id == subscription.plan_id).first()
+        
+        enhanced_subscriptions.append({
+            "subscription_id": subscription.subscription_id,
+            "customer_id": subscription.customer_id,
+            "customer_name": customer.full_name if customer else "Unknown",
+            "customer_phone": customer.phone_number if customer else "Unknown",
+            "plan_id": subscription.plan_id,
+            "plan_name": plan.plan_name if plan else "Unknown",
+            "phone_number": subscription.phone_number,
+            "is_topup": subscription.is_topup,
+            "activation_date": subscription.activation_date,
+            "expiry_date": subscription.expiry_date,
+            "data_balance_gb": float(subscription.data_balance_gb) if subscription.data_balance_gb else None,
+            "daily_data_limit_gb": float(subscription.daily_data_limit_gb) if subscription.daily_data_limit_gb else None,
+            "daily_data_used_gb": float(subscription.daily_data_used_gb) if subscription.daily_data_used_gb else None
+        })
+    
+    return enhanced_subscriptions
+
+@subscription_router.get("/queue")
+async def get_activation_queue(
+    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the subscription activation queue.
+    """
+    queue_items = crud_subscription.get_activation_queue(db, customer_id=customer_id)
+    
+    enhanced_queue = []
+    for item in queue_items:
+        customer = db.query(Customer).filter(Customer.customer_id == item.customer_id).first()
+        plan = db.query(Plan).filter(Plan.plan_id == item.subscription.plan_id).first()
+        
+        enhanced_queue.append({
+            "queue_id": item.queue_id,
+            "subscription_id": item.subscription_id,
+            "customer_id": item.customer_id,
+            "customer_name": customer.full_name if customer else "Unknown",
+            "customer_phone": customer.phone_number if customer else "Unknown",
+            "plan_id": item.subscription.plan_id,
+            "plan_name": plan.plan_name if plan else "Unknown",
+            "phone_number": item.phone_number,
+            "queue_position": item.queue_position,
+            "expected_activation_date": item.expected_activation_date,
+            "expected_expiry_date": item.expected_expiry_date,
+            "created_at": item.created_at
+        })
+    
+    return enhanced_queue
+
+@subscription_router.post("/{subscription_id}/force-activate")
+async def force_activate_subscription(
+    subscription_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Force activate a subscription (admin override).
+    """
+    subscription = crud_subscription.force_activate_subscription(db, subscription_id)
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscription not found"
+        )
+    
+    return {"message": "Subscription activated successfully", "subscription_id": subscription_id}
+
+@subscription_router.post("/{subscription_id}/force-deactivate")
+async def force_deactivate_subscription(
+    subscription_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Force deactivate a subscription (admin override).
+    """
+    subscription = crud_subscription.force_deactivate_subscription(db, subscription_id)
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscription not found"
+        )
+    
+    return {"message": "Subscription deactivated successfully", "subscription_id": subscription_id}
+
+@subscription_router.delete("/queue/{queue_id}")
+async def remove_from_queue(
+    queue_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove an item from the activation queue.
+    """
+    success = crud_subscription.remove_from_queue(db, queue_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Queue item not found"
+        )
+    
+    return {"message": "Item removed from queue successfully", "queue_id": queue_id}
+
+@subscription_router.post("/queue/process/{customer_id}")
+async def process_customer_queue(
+    customer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually process the activation queue for a customer.
+    """
+    subscription = crud_subscription.process_queue(db, customer_id)
+    if subscription:
+        return {"message": "Queue processed successfully", "activated_subscription_id": subscription.subscription_id}
+    else:
+        return {"message": "No items in queue to process"}
+
+
+# ==========================================================
+# 👥 CUSTOMER MANAGEMENT ROUTES
+# ==========================================================
+customer_router = APIRouter(prefix="/customers", tags=["Customer Management"])
+
+@customer_router.get("/", response_model=List[CustomerResponse])
+async def get_customers(
+    phone_number: Optional[str] = Query(None, description="Filter by phone number"),
+    full_name: Optional[str] = Query(None, description="Filter by full name"),
+    account_status: Optional[AccountStatus] = Query(None, description="Filter by account status"),
+    days_inactive_min: Optional[int] = Query(None, description="Minimum days inactive"),
+    days_inactive_max: Optional[int] = Query(None, description="Maximum days inactive"),
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(100, description="Limit records"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all customers with filtering options.
+    """
+    filter_params = CustomerFilter(
+        phone_number=phone_number,
+        full_name=full_name,
+        account_status=account_status,
+        days_inactive_min=days_inactive_min,
+        days_inactive_max=days_inactive_max
+    )
+    
+    customers = crud_customer.get_all(db, filter=filter_params, skip=skip, limit=limit)
+    return customers
+
+@customer_router.get("/search")
+async def search_customers(
+    search_term: str = Query(..., description="Search by phone number or name"),
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(50, description="Limit records"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Search customers by phone number or name.
+    """
+    customers = crud_customer.search_customers(db, search_term=search_term, skip=skip, limit=limit)
+    return customers
+
+@customer_router.get("/stats", response_model=CustomerStatsResponse)
+async def get_customer_stats(
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get customer statistics.
+    """
+    stats = crud_customer.get_customer_stats(db)
+    return CustomerStatsResponse(**stats)
+
+@customer_router.get("/{customer_id}", response_model=CustomerDetailResponse)
+async def get_customer_details(
+    customer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed information about a specific customer.
+    """
+    customer_data = crud_customer.get_customer_details(db, customer_id)
+    if not customer_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    customer = customer_data['customer']
+    
+    response_data = {
+        "customer_id": customer.customer_id,
+        "phone_number": customer.phone_number,
+        "full_name": customer.full_name,
+        "account_status": customer.account_status,
+        "profile_picture_url": customer.profile_picture_url,
+        "last_active_plan_date": customer.last_active_plan_date,
+        "days_inactive": customer.days_inactive,
+        "created_at": customer.created_at,
+        "updated_at": customer.updated_at,
+        "total_transactions": customer_data['total_transactions'],
+        "total_spent": customer_data['total_spent'],
+        "active_subscriptions": customer_data['active_subscriptions'],
+        "queued_subscriptions": customer_data['queued_subscriptions'],
+        "referral_code": customer_data['referral_code']
+    }
+    
+    return CustomerDetailResponse(**response_data)
+
+@customer_router.get("/{customer_id}/transactions")
+async def get_customer_transactions(
+    customer_id: int,
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(100, description="Limit records"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get transaction history for a customer.
+    """
+    # Verify customer exists
+    customer = crud_customer.get_by_id(db, customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    transactions = crud_customer.get_customer_transactions(db, customer_id, skip=skip, limit=limit)
+    
+    # Enhance with plan and offer details
+    enhanced_transactions = []
+    for transaction in transactions:
+        plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
+        offer = db.query(Offer).filter(Offer.offer_id == transaction.offer_id).first() if transaction.offer_id else None
+        
+        enhanced_transactions.append({
+            "transaction_id": transaction.transaction_id,
+            "plan_name": plan.plan_name if plan else "Unknown",
+            "offer_name": offer.offer_name if offer else None,
+            "recipient_phone_number": transaction.recipient_phone_number,
+            "transaction_type": transaction.transaction_type.value,
+            "original_amount": float(transaction.original_amount),
+            "discount_amount": float(transaction.discount_amount),
+            "final_amount": float(transaction.final_amount),
+            "payment_method": transaction.payment_method.value,
+            "payment_status": transaction.payment_status.value,
+            "transaction_date": transaction.transaction_date
+        })
+    
+    return enhanced_transactions
+
+@customer_router.get("/{customer_id}/subscriptions")
+async def get_customer_subscriptions(
+    customer_id: int,
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(100, description="Limit records"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get subscription history for a customer.
+    """
+    # Verify customer exists
+    customer = crud_customer.get_by_id(db, customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    subscriptions = crud_customer.get_customer_subscriptions(db, customer_id, skip=skip, limit=limit)
+    
+    # Enhance with plan details
+    enhanced_subscriptions = []
+    for subscription in subscriptions:
+        plan = db.query(Plan).filter(Plan.plan_id == subscription.plan_id).first()
+        
+        enhanced_subscriptions.append({
+            "subscription_id": subscription.subscription_id,
+            "plan_name": plan.plan_name if plan else "Unknown",
+            "phone_number": subscription.phone_number,
+            "is_topup": subscription.is_topup,
+            "activation_date": subscription.activation_date,
+            "expiry_date": subscription.expiry_date,
+            "data_balance_gb": float(subscription.data_balance_gb) if subscription.data_balance_gb else None,
+            "daily_data_limit_gb": float(subscription.daily_data_limit_gb) if subscription.daily_data_limit_gb else None,
+            "daily_data_used_gb": float(subscription.daily_data_used_gb) if subscription.daily_data_used_gb else None,
+            "status": "active" if subscription.expiry_date > datetime.utcnow() else "expired",
+            "created_at": subscription.created_at
+        })
+    
+    return enhanced_subscriptions
+
+@customer_router.get("/{customer_id}/queue")
+async def get_customer_queued_subscriptions(
+    customer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get queued subscriptions for a customer.
+    """
+    # Verify customer exists
+    customer = crud_customer.get_by_id(db, customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    queue_items = crud_customer.get_customer_queued_subscriptions(db, customer_id)
+    
+    enhanced_queue = []
+    for item in queue_items:
+        plan = db.query(Plan).filter(Plan.plan_id == item.subscription.plan_id).first()
+        
+        enhanced_queue.append({
+            "queue_id": item.queue_id,
+            "subscription_id": item.subscription_id,
+            "plan_name": plan.plan_name if plan else "Unknown",
+            "phone_number": item.phone_number,
+            "queue_position": item.queue_position,
+            "expected_activation_date": item.expected_activation_date,
+            "expected_expiry_date": item.expected_expiry_date,
+            "created_at": item.created_at
+        })
+    
+    return enhanced_queue
+
+@customer_router.put("/{customer_id}")
+async def update_customer(
+    customer_id: int,
+    customer_update: CustomerUpdate,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Update customer information.
+    """
+    customer = crud_customer.update_customer(db, customer_id, customer_update)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    return {"message": "Customer updated successfully", "customer_id": customer_id}
+
+@customer_router.post("/{customer_id}/deactivate")
+async def deactivate_customer(
+    customer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Deactivate a customer account.
+    """
+    customer = crud_customer.deactivate_account(db, customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    return {"message": "Customer account deactivated successfully", "customer_id": customer_id}
+
+@customer_router.post("/{customer_id}/activate")
+async def activate_customer(
+    customer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Activate a customer account.
+    """
+    customer = crud_customer.activate_account(db, customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    return {"message": "Customer account activated successfully", "customer_id": customer_id}
+
+@customer_router.post("/{customer_id}/suspend")
+async def suspend_customer(
+    customer_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Suspend a customer account.
+    """
+    customer = crud_customer.suspend_account(db, customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    return {"message": "Customer account suspended successfully", "customer_id": customer_id}
+
 
 # ==========================================================
 # 📊 DASHBOARD ANALYTICS ROUTES

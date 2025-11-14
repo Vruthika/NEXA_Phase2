@@ -13,7 +13,7 @@ def get_current_admin(
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Admin access required. Invalid admin token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
@@ -21,13 +21,20 @@ def get_current_admin(
     if not payload:
         raise credentials_exception
     
-    admin_id: int = payload.get("sub")
+    admin_id: str = payload.get("sub")
     if admin_id is None:
         raise credentials_exception
     
-    admin = db.query(Admin).filter(Admin.admin_id == admin_id).first()
+    # Verify it's actually an admin ID
+    try:
+        admin_id_int = int(admin_id)
+    except (ValueError, TypeError):
+        raise credentials_exception
+    
+    admin = db.query(Admin).filter(Admin.admin_id == admin_id_int).first()
     if admin is None:
         raise credentials_exception
+    
     return admin
 
 def get_current_customer(
@@ -36,7 +43,7 @@ def get_current_customer(
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Customer access required. Invalid customer token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
@@ -44,11 +51,18 @@ def get_current_customer(
     if not payload:
         raise credentials_exception
     
-    customer_id: int = payload.get("sub")
+    customer_id: str = payload.get("sub")
     if customer_id is None:
         raise credentials_exception
     
-    customer = db.query(Customer).filter(Customer.customer_id == customer_id).first()
+    # Verify it's actually a customer ID
+    try:
+        customer_id_int = int(customer_id)
+    except (ValueError, TypeError):
+        raise credentials_exception
+    
+    customer = db.query(Customer).filter(Customer.customer_id == customer_id_int).first()
     if customer is None:
         raise credentials_exception
+    
     return customer
