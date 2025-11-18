@@ -14,7 +14,8 @@ class PlanBase(BaseModel):
     daily_data_limit_gb: Optional[float] = None
     talktime_allowance_minutes: Optional[int] = None
     sms_allowance: Optional[int] = None
-    benefits: Optional[List[str]] = None 
+    benefits: Optional[List[str]] = None
+    max_secondary_numbers: int = 0 
     is_featured: bool = False
 
 class PlanCreate(PlanBase):
@@ -30,6 +31,7 @@ class PlanCreate(PlanBase):
     talktime_allowance_minutes: Optional[int] = None
     sms_allowance: Optional[int] = None
     benefits: Optional[List[str]] = None
+    max_secondary_numbers: int = 0
     is_featured: bool = False
 
 class PlanUpdate(BaseModel):
@@ -45,6 +47,7 @@ class PlanUpdate(BaseModel):
     talktime_allowance_minutes: Optional[int] = None
     sms_allowance: Optional[int] = None
     benefits: Optional[List[str]] = None
+    max_secondary_numbers: int = 0
     is_featured: Optional[bool] = None
     status: Optional[str] = None
 
@@ -62,6 +65,7 @@ class PlanResponse(PlanBase):
     talktime_allowance_minutes: Optional[int]
     sms_allowance: Optional[int]
     benefits: Optional[List[str]] = None
+    max_secondary_numbers: int = 0
     is_featured: bool
     status: str
     created_at: Optional[datetime] = None  # Make optional

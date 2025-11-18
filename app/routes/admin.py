@@ -535,9 +535,9 @@ async def delete_offer(
 # ==========================================================
 # 💳 TRANSACTION MONITORING ROUTES
 # ==========================================================
-transaction_router = APIRouter(prefix="/transactions", tags=["Transaction Monitoring"])
+transactions_router = APIRouter(prefix="/transactions", tags=["Transaction Monitoring"])
 
-@transaction_router.get("/", response_model=List[TransactionResponse])
+@transactions_router.get("/", response_model=List[TransactionResponse])
 async def get_transactions(
     customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
     customer_phone: Optional[str] = Query(None, description="Filter by customer phone"),
@@ -595,7 +595,7 @@ async def get_transactions(
     
     return response_transactions
 
-@transaction_router.get("/{transaction_id}", response_model=TransactionResponse)
+@transactions_router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_transaction(
     transaction_id: int,
     current_admin: Admin = Depends(get_current_admin),
@@ -635,7 +635,7 @@ async def get_transaction(
     
     return TransactionResponse(**response_data)
 
-@transaction_router.post("/export")
+@transactions_router.post("/export")
 async def export_transactions(
     export_request: TransactionExportRequest,
     current_admin: Admin = Depends(get_current_admin),
@@ -903,6 +903,7 @@ async def get_customer_details(
     
     return CustomerDetailResponse(**response_data)
 
+'''
 @customer_router.get("/{customer_id}/transactions")
 async def get_customer_transactions(
     customer_id: int,
@@ -1023,6 +1024,7 @@ async def get_customer_queued_subscriptions(
         })
     
     return enhanced_queue
+'''
 
 @customer_router.post("/{customer_id}/deactivate")
 async def deactivate_customer(

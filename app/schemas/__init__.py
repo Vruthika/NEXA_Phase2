@@ -1,27 +1,64 @@
-# app/schemas/__init__.py
-# Add the new customer operations schemas
-from .customer_operations import (
-    CustomerProfileResponse,
-    CustomerProfileUpdate,
-    CustomerTransactionResponse,
-    CustomerSubscriptionResponse,
-    CustomerQueueResponse,
-    PlanResponseForCustomer,
-    OfferResponseForCustomer,
-    RechargeRequest,
-    RechargeResponse
+from .admin import *
+from .category import *
+from .customer import *
+from .customer_operations import *
+from .offer import *
+from .plan import *
+from .transaction import *
+
+# Import postpaid schemas
+from .postpaid import (
+    PostpaidPlanResponse,
+    PostpaidActivationRequest, 
+    PostpaidActivationResponse,
+    PostpaidBillResponse,
+    DataAddonPurchaseRequest,
+    DataAddonResponse,
+    SecondaryNumberRequest,
+    SecondaryNumberResponse,
+    PostpaidUsageResponse,
+    BillPaymentRequest,
+    PostpaidActivationFilter,
+    PostpaidActivationDetailResponse
 )
 
-# Add to __all__ list
 __all__ = [
-    # ... existing imports
-    "CustomerProfileResponse",
-    "CustomerProfileUpdate", 
-    "CustomerTransactionResponse",
-    "CustomerSubscriptionResponse",
-    "CustomerQueueResponse",
-    "PlanResponseForCustomer",
-    "OfferResponseForCustomer",
-    "RechargeRequest",
-    "RechargeResponse"
+    # Admin schemas
+    "AdminBase", "AdminCreate", "AdminUpdate", "AdminResponse", "AdminLogin", "AdminChangePassword", "Token",
+    
+    # Category schemas  
+    "CategoryBase", "CategoryCreate", "CategoryResponse",
+    
+    # Customer schemas
+    "CustomerLogin", "CustomerRegister", "Token", "CustomerBase", "CustomerResponse", 
+    "CustomerDetailResponse", "CustomerUpdate", "CustomerFilter", "CustomerStatsResponse",
+    
+    # Customer operations schemas
+    "CustomerProfileResponse", "CustomerProfileUpdate", "CustomerTransactionResponse",
+    "CustomerSubscriptionResponse", "CustomerQueueResponse", "PlanResponseForCustomer",
+    "OfferResponseForCustomer", "RechargeRequest", "RechargeResponse",
+    
+    # Offer schemas
+    "OfferBase", "OfferCreate", "OfferCreateWithDiscount", "OfferUpdate", "OfferResponse", 
+    "OfferStatus", "DiscountCalculationResponse",
+    
+    # Plan schemas
+    "PlanBase", "PlanCreate", "PlanUpdate", "PlanResponse",
+    
+    # Transaction schemas
+    "TransactionBase", "TransactionResponse", "TransactionFilter", "TransactionExportRequest",
+    
+    # Postpaid schemas
+    "PostpaidPlanResponse",
+    "PostpaidActivationRequest", 
+    "PostpaidActivationResponse",
+    "PostpaidBillResponse",
+    "DataAddonPurchaseRequest",
+    "DataAddonResponse", 
+    "SecondaryNumberRequest",
+    "SecondaryNumberResponse",
+    "PostpaidUsageResponse",
+    "BillPaymentRequest",
+    "PostpaidActivationFilter",
+    "PostpaidActivationDetailResponse"
 ]

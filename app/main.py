@@ -2,7 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.config import settings
-from app.routes import admin, auth, customer_operations
+
+# Import routes
+from app.routes import auth
+from app.routes.admin import admin_router, category_router, plan_router, offer_router, transactions_router, subscription_router, customer_router, dashboard_router
+from app.routes.customer import profile_router, plans_offers_router, recharge_router, transaction_router, subscriptions_router
+from app.routes.customer_postpaid import plans_addons_router, activations_router,bill_router,secondary_numbers_router
+from app.routes.admin_postpaid import router as admin_postpaid_activations_router
+from app.routes.admin_postpaid import router1 as admin_postpaid_billing_router
+
 import asyncio
 from app.services.background_tasks import process_expired_subscriptions_periodically
 from app.models import models
@@ -24,19 +32,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Customer-facing routes
 app.include_router(auth.router)
-app.include_router(customer_operations.router)
+# Customer-facing routes
+app.include_router(profile_router)
+app.include_router(plans_offers_router)
+app.include_router(recharge_router)
+app.include_router(transaction_router)
+app.include_router(subscriptions_router)
+app.include_router(plans_addons_router)
+app.include_router(activations_router)
+app.include_router(bill_router)
+app.include_router(secondary_numbers_router)
 
 # Admin-only routes
-app.include_router(admin.admin_router, prefix="/admin")
-app.include_router(admin.category_router, prefix="/admin")
-app.include_router(admin.plan_router, prefix="/admin")
-app.include_router(admin.offer_router, prefix="/admin")
-app.include_router(admin.transaction_router, prefix="/admin")
-app.include_router(admin.subscription_router, prefix="/admin")
-app.include_router(admin.customer_router, prefix="/admin")
-app.include_router(admin.dashboard_router, prefix="/admin")
+app.include_router(admin_router, prefix="/admin")
+app.include_router(category_router, prefix="/admin")
+app.include_router(plan_router, prefix="/admin")
+app.include_router(offer_router, prefix="/admin")
+app.include_router(transactions_router, prefix="/admin")
+app.include_router(subscription_router, prefix="/admin")
+app.include_router(customer_router, prefix="/admin")
+app.include_router(admin_postpaid_activations_router, prefix="/admin")  
+app.include_router(admin_postpaid_billing_router, prefix="/admin")  
+# app.include_router(dashboard_router, prefix="/admin")
 
 
 if __name__ == "__main__":

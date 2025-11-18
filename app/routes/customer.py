@@ -14,13 +14,12 @@ from app.crud.crud_customer import crud_customer
 
 
 
-router = APIRouter(prefix="/customer", tags=["Customer Operations"])
-
 # ==========================================================
 # 👤 CUSTOMER PROFILE MANAGEMENT
 # ==========================================================
+profile_router = APIRouter(prefix="/customer", tags=["Customer Profile"])
 
-@router.get("/profile", response_model=CustomerProfileResponse)
+@profile_router.get("/profile", response_model=CustomerProfileResponse)
 async def get_customer_profile(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
@@ -51,7 +50,7 @@ async def get_customer_profile(
     
     return current_customer
 
-@router.put("/profile", response_model=CustomerProfileResponse)
+@profile_router.put("/profile", response_model=CustomerProfileResponse)
 async def update_customer_profile(
     profile_update: CustomerProfileUpdate,
     current_customer: Customer = Depends(get_current_customer),
@@ -70,7 +69,7 @@ async def update_customer_profile(
     
     return current_customer
 
-@router.post("/change-password")
+@profile_router.post("/change-password")
 async def change_customer_password(
     current_password: str = Query(..., description="Current password"),
     new_password: str = Query(..., description="New password"),
@@ -98,11 +97,13 @@ async def change_customer_password(
     
     return {"message": "Password changed successfully"}
 
+
 # ==========================================================
 # 📋 PLANS & OFFERS VIEWING
 # ==========================================================
+plans_offers_router = APIRouter(prefix="/customer", tags=["View Plans & Offers"])
 
-@router.get("/plans", response_model=List[PlanResponseForCustomer])
+@plans_offers_router.get("/plans", response_model=List[PlanResponseForCustomer])
 async def get_plans_for_customer(
     plan_type: Optional[str] = Query(None, description="Filter by plan type"),
     category_id: Optional[int] = Query(None, description="Filter by category"),
@@ -171,7 +172,7 @@ async def get_plans_for_customer(
     
     return response_plans
 
-@router.get("/plans/{plan_id}", response_model=PlanResponseForCustomer)
+@plans_offers_router.get("/plans/{plan_id}", response_model=PlanResponseForCustomer)
 async def get_plan_details(
     plan_id: int,
     current_customer: Customer = Depends(get_current_customer),
@@ -235,7 +236,7 @@ async def get_plan_details(
         offer_valid_until=active_offer.valid_until.strftime('%d.%m.%Y %H:%M') if active_offer else None
     )
     
-@router.get("/offers", response_model=List[OfferResponseForCustomer])
+@plans_offers_router.get("/offers", response_model=List[OfferResponseForCustomer])
 async def get_offers_for_customer(
     plan_id: Optional[int] = Query(None, description="Filter by plan"),
     current_customer: Customer = Depends(get_current_customer),
@@ -276,7 +277,7 @@ async def get_offers_for_customer(
     
     return response_offers
 
-@router.get("/categories")
+@plans_offers_router.get("/categories")
 async def get_categories(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
@@ -287,168 +288,13 @@ async def get_categories(
     categories = db.query(Category).all()
     return [{"category_id": cat.category_id, "category_name": cat.category_name} for cat in categories]
 
-# ==========================================================
-# 💳 TRANSACTION HISTORY
-# ==========================================================
-
-@router.get("/transactions", response_model=List[CustomerTransactionResponse])
-async def get_customer_transactions(
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get customer's transaction history.
-    """
-    transactions = crud_customer.get_customer_transactions(
-        db, current_customer.customer_id, skip=skip, limit=limit
-    )
-    
-    response_transactions = []
-    for transaction in transactions:
-        plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
-        
-        response_transactions.append(CustomerTransactionResponse(
-            transaction_id=transaction.transaction_id,
-            plan_name=plan.plan_name if plan else "Unknown",
-            recipient_phone_number=transaction.recipient_phone_number,
-            transaction_type=transaction.transaction_type,
-            original_amount=float(transaction.original_amount),
-            discount_amount=float(transaction.discount_amount),
-            final_amount=float(transaction.final_amount),
-            payment_method=transaction.payment_method,
-            payment_status=transaction.payment_status,
-            transaction_date=transaction.transaction_date
-        ))
-    
-    return response_transactions
-
-@router.get("/transactions/{transaction_id}", response_model=CustomerTransactionResponse)
-async def get_customer_transaction(
-    transaction_id: int,
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get detailed information about a specific transaction.
-    """
-    transaction = db.query(Transaction).filter(
-        Transaction.transaction_id == transaction_id,
-        Transaction.customer_id == current_customer.customer_id
-    ).first()
-    
-    if not transaction:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found"
-        )
-    
-    plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
-    
-    return CustomerTransactionResponse(
-        transaction_id=transaction.transaction_id,
-        plan_name=plan.plan_name if plan else "Unknown",
-        recipient_phone_number=transaction.recipient_phone_number,
-        transaction_type=transaction.transaction_type,
-        original_amount=float(transaction.original_amount),
-        discount_amount=float(transaction.discount_amount),
-        final_amount=float(transaction.final_amount),
-        payment_method=transaction.payment_method,
-        payment_status=transaction.payment_status,
-        transaction_date=transaction.transaction_date
-    )
-
-# ==========================================================
-# 📱 SUBSCRIPTION MANAGEMENT
-# ==========================================================
-
-@router.get("/subscriptions/active", response_model=List[CustomerSubscriptionResponse])
-async def get_customer_active_subscriptions(
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get customer's currently active subscriptions only.
-    """
-    from app.services.subscription_service import subscription_service
-    
-    # Process expired subscriptions before returning data
-    subscription_service.process_expired_subscriptions(db)
-    
-    current_time = datetime.utcnow()
-    
-    # Only get subscriptions that are:
-    # 1. Activated (activation_date is not null)
-    # 2. Not expired (expiry_date > current_time)
-    # 3. Currently active (activation_date <= current_time <= expiry_date)
-    subscriptions = db.query(Subscription).join(
-        Plan, Subscription.plan_id == Plan.plan_id
-    ).filter(
-        Subscription.customer_id == current_customer.customer_id,
-        Subscription.activation_date.isnot(None),  # Must be activated
-        Subscription.activation_date <= current_time,  # Activation date has passed
-        Subscription.expiry_date > current_time  # Not expired yet
-    ).order_by(Subscription.expiry_date.asc()).all()  # Order by expiry date
-    
-    response_subscriptions = []
-    for subscription in subscriptions:
-        response_subscriptions.append(CustomerSubscriptionResponse(
-            subscription_id=subscription.subscription_id,
-            plan_name=subscription.plan.plan_name,
-            phone_number=subscription.phone_number,
-            is_topup=subscription.is_topup,
-            activation_date=subscription.activation_date,
-            expiry_date=subscription.expiry_date,
-            data_balance_gb=float(subscription.data_balance_gb) if subscription.data_balance_gb else None,
-            daily_data_limit_gb=float(subscription.daily_data_limit_gb) if subscription.daily_data_limit_gb else None,
-            daily_data_used_gb=float(subscription.daily_data_used_gb) if subscription.daily_data_used_gb else None,
-            status="active"
-        ))
-    
-    return response_subscriptions
-
-@router.get("/subscriptions/queue", response_model=List[CustomerQueueResponse])
-async def get_customer_queued_subscriptions(
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get customer's queued subscriptions waiting for activation.
-    """
-    from app.services.subscription_service import subscription_service
-    
-    # Process expired subscriptions before returning data
-    subscription_service.process_expired_subscriptions(db)
-    
-    # Only get unprocessed queue items
-    queue_items = db.query(SubscriptionActivationQueue).join(
-        Subscription, SubscriptionActivationQueue.subscription_id == Subscription.subscription_id
-    ).join(
-        Plan, Subscription.plan_id == Plan.plan_id
-    ).filter(
-        SubscriptionActivationQueue.customer_id == current_customer.customer_id,
-        SubscriptionActivationQueue.processed_at.is_(None)  # Only unprocessed items
-    ).order_by(SubscriptionActivationQueue.queue_position).all()
-    
-    response_queue = []
-    for item in queue_items:
-        response_queue.append(CustomerQueueResponse(
-            queue_id=item.queue_id,
-            plan_name=item.subscription.plan.plan_name,
-            phone_number=item.phone_number,
-            queue_position=item.queue_position,
-            expected_activation_date=item.expected_activation_date,
-            expected_expiry_date=item.expected_expiry_date
-        ))
-    
-    return response_queue
 
 # ==========================================================
 # 🔄 RECHARGE FUNCTIONALITY
 # ==========================================================
+recharge_router = APIRouter(prefix="/customer", tags=["Recharge"])
 
-@router.post("/recharge", response_model=RechargeResponse)
+@recharge_router.post("/recharge", response_model=RechargeResponse)
 async def create_recharge(
     recharge_data: RechargeRequest,
     current_customer: Customer = Depends(get_current_customer),
@@ -644,3 +490,155 @@ async def create_recharge(
         payment_status=transaction.payment_status,
         message=message
     )
+
+# ==========================================================
+# 💳 TRANSACTION HISTORY
+# ==========================================================
+transaction_router = APIRouter(prefix="/customer", tags=["View Transactions"])
+
+@transaction_router.get("/transactions", response_model=List[CustomerTransactionResponse])
+async def get_customer_transactions(
+    skip: int = Query(0, description="Skip records"),
+    limit: int = Query(100, description="Limit records"),
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db)
+):
+    """
+    Get customer's transaction history.
+    """
+    transactions = crud_customer.get_customer_transactions(
+        db, current_customer.customer_id, skip=skip, limit=limit
+    )
+    
+    response_transactions = []
+    for transaction in transactions:
+        plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
+        
+        response_transactions.append(CustomerTransactionResponse(
+            transaction_id=transaction.transaction_id,
+            plan_name=plan.plan_name if plan else "Unknown",
+            recipient_phone_number=transaction.recipient_phone_number,
+            transaction_type=transaction.transaction_type,
+            original_amount=float(transaction.original_amount),
+            discount_amount=float(transaction.discount_amount),
+            final_amount=float(transaction.final_amount),
+            payment_method=transaction.payment_method,
+            payment_status=transaction.payment_status,
+            transaction_date=transaction.transaction_date
+        ))
+    
+    return response_transactions
+
+@transaction_router.get("/transactions/{transaction_id}", response_model=CustomerTransactionResponse)
+async def get_customer_transaction(
+    transaction_id: int,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed information about a specific transaction.
+    """
+    transaction = db.query(Transaction).filter(
+        Transaction.transaction_id == transaction_id,
+        Transaction.customer_id == current_customer.customer_id
+    ).first()
+    
+    if not transaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found"
+        )
+    
+    plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
+    
+    return CustomerTransactionResponse(
+        transaction_id=transaction.transaction_id,
+        plan_name=plan.plan_name if plan else "Unknown",
+        recipient_phone_number=transaction.recipient_phone_number,
+        transaction_type=transaction.transaction_type,
+        original_amount=float(transaction.original_amount),
+        discount_amount=float(transaction.discount_amount),
+        final_amount=float(transaction.final_amount),
+        payment_method=transaction.payment_method,
+        payment_status=transaction.payment_status,
+        transaction_date=transaction.transaction_date
+    )
+
+# ==========================================================
+# 📱 SUBSCRIPTION MANAGEMENT
+# ==========================================================
+subscriptions_router = APIRouter(prefix="/customer", tags=["View Subscriptions"])
+
+@subscriptions_router.get("/subscriptions/active", response_model=List[CustomerSubscriptionResponse])
+async def get_customer_active_subscriptions(current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db)
+):
+    from app.services.subscription_service import subscription_service
+    
+    # Process expired subscriptions before returning data
+    subscription_service.process_expired_subscriptions(db)
+    
+    current_time = datetime.utcnow()
+    
+    subscriptions = db.query(Subscription).join(
+        Plan, Subscription.plan_id == Plan.plan_id
+    ).filter(
+        Subscription.customer_id == current_customer.customer_id,
+        Subscription.activation_date.isnot(None),  # Must be activated
+        Subscription.activation_date <= current_time,  # Activation date has passed
+        Subscription.expiry_date > current_time  # Not expired yet
+    ).order_by(Subscription.expiry_date.asc()).all()  # Order by expiry date
+    
+    response_subscriptions = []
+    for subscription in subscriptions:
+        response_subscriptions.append(CustomerSubscriptionResponse(
+            subscription_id=subscription.subscription_id,
+            plan_name=subscription.plan.plan_name,
+            phone_number=subscription.phone_number,
+            is_topup=subscription.is_topup,
+            activation_date=subscription.activation_date,
+            expiry_date=subscription.expiry_date,
+            data_balance_gb=float(subscription.data_balance_gb) if subscription.data_balance_gb else None,
+            daily_data_limit_gb=float(subscription.daily_data_limit_gb) if subscription.daily_data_limit_gb else None,
+            daily_data_used_gb=float(subscription.daily_data_used_gb) if subscription.daily_data_used_gb else None,
+            status="active"
+        ))
+    
+    return response_subscriptions
+
+@subscriptions_router.get("/subscriptions/queue", response_model=List[CustomerQueueResponse])
+async def get_customer_queued_subscriptions(
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db)
+):
+    """
+    Get customer's queued subscriptions waiting for activation.
+    """
+    from app.services.subscription_service import subscription_service
+    
+    # Process expired subscriptions before returning data
+    subscription_service.process_expired_subscriptions(db)
+    
+    # Only get unprocessed queue items
+    queue_items = db.query(SubscriptionActivationQueue).join(
+        Subscription, SubscriptionActivationQueue.subscription_id == Subscription.subscription_id
+    ).join(
+        Plan, Subscription.plan_id == Plan.plan_id
+    ).filter(
+        SubscriptionActivationQueue.customer_id == current_customer.customer_id,
+        SubscriptionActivationQueue.processed_at.is_(None)  # Only unprocessed items
+    ).order_by(SubscriptionActivationQueue.queue_position).all()
+    
+    response_queue = []
+    for item in queue_items:
+        response_queue.append(CustomerQueueResponse(
+            queue_id=item.queue_id,
+            plan_name=item.subscription.plan.plan_name,
+            phone_number=item.phone_number,
+            queue_position=item.queue_position,
+            expected_activation_date=item.expected_activation_date,
+            expected_expiry_date=item.expected_expiry_date
+        ))
+    
+    return response_queue
+

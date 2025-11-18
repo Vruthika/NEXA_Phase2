@@ -10,7 +10,7 @@ from app.crud import crud_admin, crud_customer
 from app.core.security import create_access_token
 from app.config import settings
 
-router = APIRouter(tags=["authentication"])
+router = APIRouter(tags=["Authentication"])
 
 # Admin Authentication
 @router.post("/admin/login", response_model=AdminToken)
@@ -24,7 +24,9 @@ async def admin_login(login_data: AdminLogin, db: Session = Depends(get_db)):
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(admin.admin_id)}, expires_delta=access_token_expires
+        data={"sub": str(admin.admin_id)}, 
+        expires_delta=access_token_expires,
+        user_type="admin"  # Add user type
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -41,7 +43,9 @@ async def customer_login(login_data: CustomerLogin, db: Session = Depends(get_db
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(customer.customer_id)}, expires_delta=access_token_expires
+        data={"sub": str(customer.customer_id)}, 
+        expires_delta=access_token_expires,
+        user_type="customer"  # Add user type
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
