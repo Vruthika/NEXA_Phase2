@@ -5,8 +5,15 @@ from .customer_operations import *
 from .offer import *
 from .plan import *
 from .transaction import *
+from .linked_account import (
+    LinkedAccountBase,
+    LinkedAccountCreate,
+    LinkedAccountResponse,
+    LinkedAccountDetailResponse,
+    RechargeLinkedRequest,
+    RechargeLinkedResponse
+)
 
-# Import postpaid schemas
 from .postpaid import (
     PostpaidPlanResponse,
     PostpaidActivationRequest, 
@@ -61,4 +68,12 @@ __all__ = [
     "BillPaymentRequest",
     "PostpaidActivationFilter",
     "PostpaidActivationDetailResponse"
+    
+    # Linked Account schemas
+    "LinkedAccountBase",
+    "LinkedAccountCreate", 
+    "LinkedAccountResponse",
+    "LinkedAccountDetailResponse",
+    "RechargeLinkedRequest",
+    "RechargeLinkedResponse"
 ]

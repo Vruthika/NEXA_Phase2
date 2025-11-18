@@ -15,5 +15,6 @@ __all__ = [
     "crud_plan",
     "crud_subscription",
     "crud_transaction",
-    "crud_postpaid"
+    "crud_postpaid",
+    "crud_linked_account"
 ]

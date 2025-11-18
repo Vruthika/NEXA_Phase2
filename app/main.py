@@ -10,6 +10,8 @@ from app.routes.customer import profile_router, plans_offers_router, recharge_ro
 from app.routes.customer_postpaid import plans_addons_router, activations_router,bill_router,secondary_numbers_router
 from app.routes.admin_postpaid import router as admin_postpaid_activations_router
 from app.routes.admin_postpaid import router1 as admin_postpaid_billing_router
+from app.routes.customer_linked_accounts import router as customer_linked_accounts_router
+from app.routes.admin_linked_accounts import router as admin_linked_accounts_router
 
 import asyncio
 from app.services.background_tasks import process_expired_subscriptions_periodically
@@ -43,6 +45,8 @@ app.include_router(plans_addons_router)
 app.include_router(activations_router)
 app.include_router(bill_router)
 app.include_router(secondary_numbers_router)
+app.include_router(customer_linked_accounts_router)
+
 
 # Admin-only routes
 app.include_router(admin_router, prefix="/admin")
@@ -54,6 +58,7 @@ app.include_router(subscription_router, prefix="/admin")
 app.include_router(customer_router, prefix="/admin")
 app.include_router(admin_postpaid_activations_router, prefix="/admin")  
 app.include_router(admin_postpaid_billing_router, prefix="/admin")  
+app.include_router(admin_linked_accounts_router, prefix="/admin")
 # app.include_router(dashboard_router, prefix="/admin")
 
 
