@@ -21,6 +21,10 @@ def get_current_admin(
     if not payload:
         raise credentials_exception
     
+    # Check if token has admin claim
+    if payload.get("user_type") != "admin":
+        raise credentials_exception
+    
     admin_id: str = payload.get("sub")
     if admin_id is None:
         raise credentials_exception
@@ -48,6 +52,10 @@ def get_current_customer(
     
     payload = verify_token(credentials.credentials)
     if not payload:
+        raise credentials_exception
+    
+    # Check if token has customer claim
+    if payload.get("user_type") != "customer":
         raise credentials_exception
     
     customer_id: str = payload.get("sub")
