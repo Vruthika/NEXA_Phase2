@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     # ADMIN DEFAULT CREDENTIALS
     # ============================================
     ADMIN_DEFAULT_NAME: str = "Super Admin"
-    ADMIN_DEFAULT_PHONE: str = "9090909090"
     ADMIN_DEFAULT_EMAIL: str = "admin@nexa.com"
     ADMIN_DEFAULT_PASSWORD: str = "admin123"
     

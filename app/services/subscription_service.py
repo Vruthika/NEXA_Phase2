@@ -1,4 +1,3 @@
-# app/services/subscription_service.py
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.models.models import Subscription, SubscriptionActivationQueue, Customer

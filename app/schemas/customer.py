@@ -13,6 +13,7 @@ class CustomerRegister(BaseModel):
     password: str
     full_name: str
     profile_picture_url: Optional[str] = None
+    referral_code: Optional[str] = None  
 
     @validator('phone_number')
     def validate_phone_number(cls, v):
@@ -25,7 +26,7 @@ class CustomerRegister(BaseModel):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
         return v
-
+    
 class Token(BaseModel):
     access_token: str
     token_type: str

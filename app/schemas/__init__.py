@@ -5,15 +5,8 @@ from .customer_operations import *
 from .offer import *
 from .plan import *
 from .transaction import *
-from .linked_account import (
-    LinkedAccountBase,
-    LinkedAccountCreate,
-    LinkedAccountResponse,
-    LinkedAccountDetailResponse,
-    RechargeLinkedRequest,
-    RechargeLinkedResponse
-)
 
+# Import postpaid schemas
 from .postpaid import (
     PostpaidPlanResponse,
     PostpaidActivationRequest, 
@@ -27,6 +20,30 @@ from .postpaid import (
     BillPaymentRequest,
     PostpaidActivationFilter,
     PostpaidActivationDetailResponse
+)
+
+# Import referral schemas
+from .referral import (
+    ReferralProgramBase,
+    ReferralProgramCreate,
+    ReferralProgramResponse,
+    ReferralDiscountResponse,
+    ReferralUsageLogResponse,
+    ReferralStatsResponse,
+    ReferralApplyRequest,
+    ReferralApplyResponse,
+    ReferralConfig,  # This was missing
+    SystemReferralStats
+)
+
+# Import linked account schemas
+from .linked_account import (
+    LinkedAccountBase,
+    LinkedAccountCreate,
+    LinkedAccountResponse,
+    LinkedAccountDetailResponse,
+    RechargeLinkedRequest,
+    RechargeLinkedResponse
 )
 
 __all__ = [
@@ -67,7 +84,19 @@ __all__ = [
     "PostpaidUsageResponse",
     "BillPaymentRequest",
     "PostpaidActivationFilter",
-    "PostpaidActivationDetailResponse"
+    "PostpaidActivationDetailResponse",
+    
+    # Referral schemas
+    "ReferralProgramBase",
+    "ReferralProgramCreate",
+    "ReferralProgramResponse",
+    "ReferralDiscountResponse",
+    "ReferralUsageLogResponse",
+    "ReferralStatsResponse",
+    "ReferralApplyRequest",
+    "ReferralApplyResponse",
+    "ReferralConfig",  # This was missing
+    "SystemReferralStats",
     
     # Linked Account schemas
     "LinkedAccountBase",

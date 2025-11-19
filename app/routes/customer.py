@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import joinedload
 
 from app.database import get_db
-from app.models.models import Customer, Plan, Offer, Transaction, Subscription, SubscriptionActivationQueue, Category
+from app.models.models import Customer, Plan, Offer, ReferralDiscount, ReferralProgram, ReferralStatus, Transaction, Subscription, SubscriptionActivationQueue, Category
 from app.core.auth import get_current_customer
 from app.schemas.customer_operations import *
 from app.crud import crud_customer, crud_subscription
@@ -302,8 +302,10 @@ async def create_recharge(
 ):
     """
     Create a new recharge transaction and handle subscription logic.
+    Applies referral discounts and completes referral process for first recharge.
     """
     from app.services.subscription_service import subscription_service
+    from app.crud.crud_referral import crud_referral
     
     # Verify plan exists and is active
     plan = db.query(Plan).filter(
@@ -317,6 +319,14 @@ async def create_recharge(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Plan not found or inactive"
         )
+    
+    # Check for available referral discounts for this customer
+    referral_discounts = crud_referral.get_customer_referral_discounts(db, current_customer.customer_id)
+    active_referral_discount = None
+    
+    if referral_discounts:
+        # Use the first available referral discount
+        active_referral_discount = referral_discounts[0]
     
     # Verify offer if provided
     offer = None
@@ -334,16 +344,37 @@ async def create_recharge(
                 detail="Offer not found or expired"
             )
     
-    # Calculate amounts
+    # Calculate amounts - PRIORITIZE REFERRAL DISCOUNT OVER OFFER
     original_amount = float(plan.price)
     discount_amount = 0.0
+    discount_type = None
+    referral_message = ""
     
-    if offer:
+    if active_referral_discount:
+        # Apply referral discount
+        discount_percentage = float(active_referral_discount.discount_percentage)
+        discount_amount = (original_amount * discount_percentage) / 100
+        final_amount = original_amount - discount_amount
+        discount_type = "referral"
+        
+        # Mark the referral discount as used
+        crud_referral.mark_discount_used(db, active_referral_discount.discount_id, current_customer.customer_id)
+        
+        referral_message = f" Applied {discount_percentage}% referral discount!"
+        print(f"DEBUG: Applied referral discount {discount_percentage}% for customer {current_customer.customer_id}")
+        
+    elif offer:
+        # Apply offer discount
         discounted_price = float(offer.discounted_price)
         discount_amount = original_amount - discounted_price
         final_amount = discounted_price
+        discount_type = "offer"
+        referral_message = ""
     else:
+        # No discounts
         final_amount = original_amount
+        discount_type = None
+        referral_message = ""
     
     # Create transaction
     transaction = Transaction(
@@ -354,6 +385,7 @@ async def create_recharge(
         transaction_type="prepaid_recharge",
         original_amount=original_amount,
         discount_amount=discount_amount,
+        discount_type=discount_type,
         final_amount=final_amount,
         payment_method=recharge_data.payment_method,
         payment_status="success"
@@ -364,6 +396,28 @@ async def create_recharge(
     db.refresh(transaction)
     
     current_time = datetime.utcnow()
+    
+    # Check if this is the customer's first successful recharge
+    previous_recharges = db.query(Transaction).filter(
+        Transaction.customer_id == current_customer.customer_id,
+        Transaction.payment_status == "success",
+        Transaction.transaction_id != transaction.transaction_id  # Exclude current transaction
+    ).count()
+
+    # If this is the first recharge, complete any pending referrals for this customer
+    if previous_recharges == 0:
+        print(f"DEBUG: First recharge for customer {current_customer.customer_id}, checking for pending referrals...")
+        
+        # Complete the referral if this customer was referred by someone
+        completed_referral, error = crud_referral.complete_referral(
+            db, current_customer.customer_id, current_customer.phone_number
+        )
+        
+        if completed_referral:
+            print(f"DEBUG: Referral completed successfully for customer: {current_customer.phone_number}")
+            referral_message += " Referral completed! You earned rewards for your referrer."
+        else:
+            print(f"DEBUG: No referral to complete or error: {error}")
     
     # Check if customer has active subscriptions for this phone number
     active_subscriptions = db.query(Subscription).filter(
@@ -402,7 +456,7 @@ async def create_recharge(
         current_customer.inactivity_status_updated_at = current_time
         db.commit()
         
-        message = "Topup recharge successful! Your data has been added to your account."
+        message = "Topup recharge successful! Your data has been added to your account." + referral_message
         
     elif not active_subscriptions:
         # No active subscription - activate immediately for regular plans
@@ -433,7 +487,7 @@ async def create_recharge(
         current_customer.inactivity_status_updated_at = current_time
         db.commit()
         
-        message = "Recharge successful! Your plan is now active."
+        message = "Recharge successful! Your plan is now active." + referral_message
         
     else:
         # Active subscription exists for regular plans - add to queue
@@ -478,7 +532,7 @@ async def create_recharge(
         db.add(queue_item)
         db.commit()
         
-        message = f"Recharge successful! Your plan is queued (position {queue_position}) and will activate when your current plan expires on {activation_date.strftime('%d %b %Y')}."
+        message = f"Recharge successful! Your plan is queued (position {queue_position}) and will activate when your current plan expires on {activation_date.strftime('%d %b %Y')}." + referral_message
     
     # Refresh to get updated data
     db.refresh(current_customer)
@@ -490,7 +544,6 @@ async def create_recharge(
         payment_status=transaction.payment_status,
         message=message
     )
-
 # ==========================================================
 # 💳 TRANSACTION HISTORY
 # ==========================================================

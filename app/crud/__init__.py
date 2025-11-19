@@ -6,6 +6,7 @@ from app.crud.crud_plan import crud_plan
 from app.crud.crud_subscription import crud_subscription
 from app.crud.crud_transaction import crud_transaction
 from app.crud.crud_postpaid import crud_postpaid
+from app.crud.crud_referral import crud_referral 
 
 __all__ = [
     "crud_admin",
@@ -16,5 +17,6 @@ __all__ = [
     "crud_subscription",
     "crud_transaction",
     "crud_postpaid",
-    "crud_linked_account"
+    "crud_linked_account",
+    "crud_referral"
 ]
