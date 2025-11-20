@@ -82,7 +82,6 @@ class NotificationType(str, enum.Enum):
     daily_limit_reached = "daily_limit_reached"
 
 class NotificationChannel(str, enum.Enum):
-    email = "email"
     sms = "sms"
     push = "push"
 
@@ -494,6 +493,8 @@ class Notification(Base):
     type = Column(Enum(NotificationType), nullable=False)
     channel = Column(Enum(NotificationChannel), nullable=False)
     is_read = Column(Boolean, default=False)
+    status = Column(String(20), default="pending")  
+    delivery_mode = Column(String(20), default="real")  
     sent_at = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
     

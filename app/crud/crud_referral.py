@@ -6,6 +6,7 @@ import string
 from typing import List, Optional
 from app.models.models import ReferralProgram, ReferralDiscount, ReferralUsageLog, Customer, ReferralStatus
 from app.schemas.referral import ReferralProgramCreate
+from app.services.automated_notifications import automated_notifications
 
 class CRUDReferral:
     def generate_referral_code(self, db: Session, length=8):
@@ -134,7 +135,7 @@ class CRUDReferral:
         if referral_program.current_uses >= referral_program.max_uses:
             referral_program.is_active = False
 
-        # Create 30% discount for referrer - STEP 3
+        # Create 30% discount for referrer
         referrer_discount = ReferralDiscount(
             referral_id=referral_program.referral_id,
             customer_id=referral_program.referrer_customer_id,
@@ -143,6 +144,11 @@ class CRUDReferral:
         )
 
         db.add(referrer_discount)
+        
+        # Trigger referral bonus notification for the referrer
+        automated_notifications.trigger_referral_bonus_notification(
+            db, referral_program.referrer_customer_id, 30.0
+        )
         db.commit()
 
         return referral_program, None

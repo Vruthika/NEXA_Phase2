@@ -14,6 +14,8 @@ from app.routes.customer_linked_accounts import router as customer_linked_accoun
 from app.routes.admin_linked_accounts import router as admin_linked_accounts_router
 from app.routes.customer_referral import router as customer_referral_router
 from app.routes.admin_referral import router as admin_referral_router
+from app.routes.customer_notifications import router as customer_notifications_router
+from app.routes.admin_notifications import router as admin_notifications_router
 
 import asyncio
 from app.services.background_tasks import process_expired_subscriptions_periodically
@@ -49,6 +51,7 @@ app.include_router(bill_router)
 app.include_router(secondary_numbers_router)
 app.include_router(customer_linked_accounts_router)
 app.include_router(customer_referral_router)
+app.include_router(customer_notifications_router)
 
 
 # Admin-only routes
@@ -63,9 +66,16 @@ app.include_router(admin_postpaid_activations_router, prefix="/admin")
 app.include_router(admin_postpaid_billing_router, prefix="/admin")  
 app.include_router(admin_linked_accounts_router, prefix="/admin")
 app.include_router(admin_referral_router, prefix="/admin")
+app.include_router(admin_notifications_router, prefix="/admin")
 # app.include_router(dashboard_router, prefix="/admin")
 
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks when application starts"""
+    asyncio.create_task(process_expired_subscriptions_periodically())
+    print("🚀 Background tasks started")
 
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
@@ -74,3 +84,4 @@ if __name__ == "__main__":
         port=8000, 
         reload=settings.DEBUG
     )
+    

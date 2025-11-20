@@ -11,6 +11,7 @@ from app.schemas.customer_operations import *
 from app.crud import crud_customer, crud_subscription
 from app.core.security import verify_password, get_password_hash
 from app.crud.crud_customer import crud_customer
+from app.services.automated_notifications import automated_notifications
 
 
 
@@ -306,6 +307,7 @@ async def create_recharge(
     """
     from app.services.subscription_service import subscription_service
     from app.crud.crud_referral import crud_referral
+    from app.services.automated_notifications import automated_notifications
     
     # Verify plan exists and is active
     plan = db.query(Plan).filter(
@@ -395,6 +397,11 @@ async def create_recharge(
     db.commit()
     db.refresh(transaction)
     
+    # Trigger recharge success notification
+    automated_notifications.trigger_recharge_success_notification(
+        db, current_customer.customer_id, plan.plan_name, final_amount
+    )
+    
     current_time = datetime.utcnow()
     
     # Check if this is the customer's first successful recharge
@@ -450,6 +457,11 @@ async def create_recharge(
         db.commit()
         db.refresh(subscription)
         
+        # >>> TOPUP/IMMEDIATE ACTIVATION <<<
+        automated_notifications.trigger_plan_activated_notification(
+            db, current_customer.customer_id, plan.plan_name
+        )
+        
         # Update customer's last_active_plan_date
         current_customer.last_active_plan_date = current_time
         current_customer.days_inactive = 0
@@ -481,6 +493,11 @@ async def create_recharge(
         db.commit()
         db.refresh(subscription)
         
+        # >>> IMMEDIATE ACTIVATION <<<
+        automated_notifications.trigger_plan_activated_notification(
+            db, current_customer.customer_id, plan.plan_name
+        )
+        
         # Update customer's last_active_plan_date
         current_customer.last_active_plan_date = current_time
         current_customer.days_inactive = 0
@@ -491,8 +508,17 @@ async def create_recharge(
         
     else:
         # Active subscription exists for regular plans - add to queue
-        latest_active_subscription = active_subscriptions[0]  # Get the one with latest expiry
-        activation_date = latest_active_subscription.expiry_date
+        # Filter only BASE plans (not topups) to determine activation date
+        base_plans = [sub for sub in active_subscriptions if not sub.is_topup]
+        
+        if base_plans:
+            # Use the latest base plan expiry for activation
+            latest_active_base_plan = base_plans[0]  # Already ordered by expiry_date desc
+            activation_date = latest_active_base_plan.expiry_date
+        else:
+            # If no base plans found (shouldn't happen in normal flow), activate immediately
+            activation_date = current_time
+            
         expiry_date = activation_date + timedelta(days=plan.validity_days)
         
         # Create subscription with calculated activation date
@@ -502,7 +528,7 @@ async def create_recharge(
             plan_id=recharge_data.plan_id,
             transaction_id=transaction.transaction_id,
             is_topup=plan.is_topup,
-            activation_date=activation_date,  # Set to when current plan expires
+            activation_date=activation_date,  # Set to when current base plan expires
             expiry_date=expiry_date,
             data_balance_gb=float(plan.data_allowance_gb) if plan.data_allowance_gb else None,
             daily_data_limit_gb=float(plan.daily_data_limit_gb) if plan.daily_data_limit_gb else None,
@@ -514,25 +540,35 @@ async def create_recharge(
         db.commit()
         db.refresh(subscription)
         
-        # Get next queue position
-        queue_position = subscription_service.get_next_queue_position(
-            db, current_customer.customer_id, recharge_data.recipient_phone_number
-        )
-        
-        # Add to activation queue
-        queue_item = SubscriptionActivationQueue(
-            subscription_id=subscription.subscription_id,
-            customer_id=current_customer.customer_id,
-            phone_number=recharge_data.recipient_phone_number,
-            expected_activation_date=activation_date,  
-            expected_expiry_date=expiry_date,
-            queue_position=queue_position
-        )
-        
-        db.add(queue_item)
-        db.commit()
-        
-        message = f"Recharge successful! Your plan is queued (position {queue_position}) and will activate when your current plan expires on {activation_date.strftime('%d %b %Y')}." + referral_message
+        # Only add BASE plans to activation queue (not topups)
+        if not plan.is_topup:
+            # Get next queue position
+            queue_position = subscription_service.get_next_queue_position(
+                db, current_customer.customer_id, recharge_data.recipient_phone_number
+            )
+            
+            # Add to activation queue
+            queue_item = SubscriptionActivationQueue(
+                subscription_id=subscription.subscription_id,
+                customer_id=current_customer.customer_id,
+                phone_number=recharge_data.recipient_phone_number,
+                expected_activation_date=activation_date,  
+                expected_expiry_date=expiry_date,
+                queue_position=queue_position
+            )
+            
+            db.add(queue_item)
+            db.commit()
+            
+            # >>> QUEUED ACTIVATION <<<
+            automated_notifications.trigger_plan_queued_notification(
+                db, current_customer.customer_id, plan.plan_name, queue_position, activation_date
+            )
+            
+            message = f"Recharge successful! Your plan is queued (position {queue_position}) and will activate when your current plan expires on {activation_date.strftime('%d %b %Y')}." + referral_message
+        else:
+            # This shouldn't happen as topups are handled above, but just in case
+            message = "Recharge successful! Your topup has been processed." + referral_message
     
     # Refresh to get updated data
     db.refresh(current_customer)
@@ -544,6 +580,7 @@ async def create_recharge(
         payment_status=transaction.payment_status,
         message=message
     )
+
 # ==========================================================
 # 💳 TRANSACTION HISTORY
 # ==========================================================
