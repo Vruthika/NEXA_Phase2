@@ -16,6 +16,10 @@ from app.routes.customer_referral import router as customer_referral_router
 from app.routes.admin_referral import router as admin_referral_router
 from app.routes.customer_notifications import router as customer_notifications_router
 from app.routes.admin_notifications import router as admin_notifications_router
+from app.routes.admin_analytics import router as analytics_router
+from app.routes.admin_report import router as reports_router
+
+
 
 import asyncio
 from app.services.background_tasks import process_expired_subscriptions_periodically
@@ -67,13 +71,9 @@ app.include_router(admin_postpaid_billing_router, prefix="/admin")
 app.include_router(admin_linked_accounts_router, prefix="/admin")
 app.include_router(admin_referral_router, prefix="/admin")
 app.include_router(admin_notifications_router, prefix="/admin")
+app.include_router(analytics_router, prefix="/admin")
+# app.include_router(reports_router, prefix="/api/v1")
 # app.include_router(dashboard_router, prefix="/admin")
-
-@app.on_event("startup")
-async def startup_event():
-    """Start background tasks when application starts"""
-    asyncio.create_task(process_expired_subscriptions_periodically())
-    print("🚀 Background tasks started")
 
     
 if __name__ == "__main__":
