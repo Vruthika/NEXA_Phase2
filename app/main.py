@@ -18,6 +18,7 @@ from app.routes.customer_notifications import router as customer_notifications_r
 from app.routes.admin_notifications import router as admin_notifications_router
 from app.routes.admin_analytics import router as analytics_router
 from app.routes.admin_report import router as reports_router
+from app.routes.admin_backup_restore import router as backup_restore_router
 
 
 
@@ -72,6 +73,7 @@ app.include_router(admin_linked_accounts_router, prefix="/admin")
 app.include_router(admin_referral_router, prefix="/admin")
 app.include_router(admin_notifications_router, prefix="/admin")
 app.include_router(analytics_router, prefix="/admin")
+app.include_router(backup_restore_router, prefix="/admin")
 # app.include_router(reports_router, prefix="/api/v1")
 # app.include_router(dashboard_router, prefix="/admin")
 

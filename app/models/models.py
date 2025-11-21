@@ -521,7 +521,7 @@ class Restore(Base):
     __tablename__ = "restore"
 
     restore_id = Column(BigInteger, primary_key=True, autoincrement=True)
-    admin_id = Column(BigInteger, ForeignKey("admins.admin_id"), nullable=False)  # Fixed to "admins"
+    admin_id = Column(BigInteger, ForeignKey("admins.admin_id"), nullable=False) 
     file_name = Column(String(255), nullable=False)
     path = Column(String(500), nullable=False)
     type = Column(String(20), CheckConstraint("type IN ('auto', 'manual')"))

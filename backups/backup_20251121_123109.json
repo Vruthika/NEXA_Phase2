@@ -1,0 +1,369 @@
+{
+  "customers": [
+    {
+      "customer_id": 1,
+      "phone_number": "9345899429",
+      "full_name": "Vruthika L S",
+      "account_status": "active",
+      "created_at": "2025-11-14T10:01:50.639606"
+    },
+    {
+      "customer_id": 2,
+      "phone_number": "9500459161",
+      "full_name": "Latha",
+      "account_status": "active",
+      "created_at": "2025-11-14T20:13:00.959503"
+    },
+    {
+      "customer_id": 10,
+      "phone_number": "9952574455",
+      "full_name": "Sreekanth",
+      "account_status": "active",
+      "created_at": "2025-11-20T19:58:31.725871"
+    },
+    {
+      "customer_id": 11,
+      "phone_number": "9003704250",
+      "full_name": "aravinth",
+      "account_status": "active",
+      "created_at": "2025-11-20T21:16:50.770224"
+    },
+    {
+      "customer_id": 3,
+      "phone_number": "9150109222",
+      "full_name": "Santhosh",
+      "account_status": "active",
+      "created_at": "2025-11-16T20:49:28.520470"
+    },
+    {
+      "customer_id": 4,
+      "phone_number": "9090909090",
+      "full_name": "John Doe",
+      "account_status": "active",
+      "created_at": "2025-11-16T22:16:22.042635"
+    }
+  ],
+  "plans": [
+    {
+      "plan_id": 1,
+      "plan_name": "1.5GB/day 84 Days Pack",
+      "plan_type": "Prepaid",
+      "price": 599.0,
+      "validity_days": 84,
+      "data_allowance_gb": 126.0,
+      "is_featured": false,
+      "created_at": "2025-10-23T13:01:00.271669"
+    },
+    {
+      "plan_id": 2,
+      "plan_name": "2GB/day 56 Days Pack",
+      "plan_type": "Prepaid",
+      "price": 699.0,
+      "validity_days": 56,
+      "data_allowance_gb": 112.0,
+      "is_featured": false,
+      "created_at": "2025-10-23T14:27:38.307882"
+    },
+    {
+      "plan_id": 4,
+      "plan_name": "1 GB Top-Up",
+      "plan_type": "Prepaid",
+      "price": 19.0,
+      "validity_days": 1,
+      "data_allowance_gb": 1.0,
+      "is_featured": false,
+      "created_at": "2025-11-14T20:27:02.160182"
+    },
+    {
+      "plan_id": 5,
+      "plan_name": "Individual Postpaid Plan Basic",
+      "plan_type": "Postpaid",
+      "price": 399.0,
+      "validity_days": 30,
+      "data_allowance_gb": 35.0,
+      "is_featured": false,
+      "created_at": "2025-11-16T20:46:20.890153"
+    },
+    {
+      "plan_id": 6,
+      "plan_name": "Individual Postpaid Plan Premium",
+      "plan_type": "Postpaid",
+      "price": 599.0,
+      "validity_days": 30,
+      "data_allowance_gb": 50.0,
+      "is_featured": false,
+      "created_at": "2025-11-16T20:48:37.330393"
+    },
+    {
+      "plan_id": 7,
+      "plan_name": "Family Pack – 3 Members",
+      "plan_type": "Postpaid",
+      "price": 999.0,
+      "validity_days": 30,
+      "data_allowance_gb": 70.0,
+      "is_featured": false,
+      "created_at": "2025-11-16T22:13:28.192499"
+    },
+    {
+      "plan_id": 8,
+      "plan_name": "10 GB Addon-Individual Plans",
+      "plan_type": "Postpaid",
+      "price": 100.0,
+      "validity_days": 0,
+      "data_allowance_gb": 10.0,
+      "is_featured": false,
+      "created_at": "2025-11-18T12:59:58.847200"
+    }
+  ],
+  "categories": [
+    {
+      "category_id": 1,
+      "category_name": "1.5 GB/ Day",
+      "created_at": "2025-10-23T12:17:14.356103"
+    },
+    {
+      "category_id": 3,
+      "category_name": "2.5 GB/ Day",
+      "created_at": "2025-10-23T12:18:24.393409"
+    },
+    {
+      "category_id": 4,
+      "category_name": "3 GB/ Day",
+      "created_at": "2025-10-23T12:18:41.773341"
+    },
+    {
+      "category_id": 5,
+      "category_name": "Annual Plans",
+      "created_at": "2025-10-23T12:19:06.638422"
+    },
+    {
+      "category_id": 6,
+      "category_name": "True Unlimited 5G Plans",
+      "created_at": "2025-10-23T12:21:30.763525"
+    },
+    {
+      "category_id": 2,
+      "category_name": "2 GB/ Day",
+      "created_at": "2025-10-23T12:17:48.772335"
+    },
+    {
+      "category_id": 7,
+      "category_name": "Top Up",
+      "created_at": "2025-10-23T12:26:50.863018"
+    },
+    {
+      "category_id": 10,
+      "category_name": "Individual Plans",
+      "created_at": "2025-11-16T20:43:53.308464"
+    },
+    {
+      "category_id": 11,
+      "category_name": "Family Pack",
+      "created_at": "2025-11-16T22:12:07.853346"
+    },
+    {
+      "category_id": 12,
+      "category_name": "Add-Ons",
+      "created_at": "2025-11-18T12:49:46.297400"
+    }
+  ],
+  "transactions": [
+    {
+      "transaction_id": 1,
+      "customer_id": 1,
+      "plan_id": 1,
+      "final_amount": 599.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T19:51:51.494600"
+    },
+    {
+      "transaction_id": 2,
+      "customer_id": 1,
+      "plan_id": 2,
+      "final_amount": 699.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T19:52:09.861448"
+    },
+    {
+      "transaction_id": 3,
+      "customer_id": 10,
+      "plan_id": 1,
+      "final_amount": 539.1,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:00:35.626779"
+    },
+    {
+      "transaction_id": 4,
+      "customer_id": 1,
+      "plan_id": 1,
+      "final_amount": 419.3,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:02:04.322070"
+    },
+    {
+      "transaction_id": 5,
+      "customer_id": 2,
+      "plan_id": 1,
+      "final_amount": 599.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:09:50.628479"
+    },
+    {
+      "transaction_id": 6,
+      "customer_id": 2,
+      "plan_id": 2,
+      "final_amount": 699.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:11:06.878848"
+    },
+    {
+      "transaction_id": 7,
+      "customer_id": 2,
+      "plan_id": 4,
+      "final_amount": 19.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:13:28.896438"
+    },
+    {
+      "transaction_id": 8,
+      "customer_id": 10,
+      "plan_id": 2,
+      "final_amount": 699.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:18:27.185614"
+    },
+    {
+      "transaction_id": 9,
+      "customer_id": 10,
+      "plan_id": 1,
+      "final_amount": 599.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T20:20:48.041517"
+    },
+    {
+      "transaction_id": 10,
+      "customer_id": 11,
+      "plan_id": 2,
+      "final_amount": 699.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T21:18:02.984683"
+    },
+    {
+      "transaction_id": 11,
+      "customer_id": 11,
+      "plan_id": 1,
+      "final_amount": 599.0,
+      "payment_status": "success",
+      "transaction_type": "prepaid_recharge",
+      "transaction_date": "2025-11-20T21:49:31.975030"
+    }
+  ],
+  "subscriptions": [
+    {
+      "subscription_id": 1,
+      "customer_id": 1,
+      "plan_id": 1,
+      "phone_number": "9345899429",
+      "activation_date": "2025-11-20T14:21:51.581178",
+      "expiry_date": "2026-02-12T14:21:51.581178"
+    },
+    {
+      "subscription_id": 2,
+      "customer_id": 1,
+      "plan_id": 2,
+      "phone_number": "9345899429",
+      "activation_date": "2026-02-12T14:21:51.581178",
+      "expiry_date": "2026-04-09T14:21:51.581178"
+    },
+    {
+      "subscription_id": 3,
+      "customer_id": 10,
+      "plan_id": 1,
+      "phone_number": "9952574455",
+      "activation_date": "2025-11-20T14:30:35.690574",
+      "expiry_date": "2026-02-12T14:30:35.690574"
+    },
+    {
+      "subscription_id": 4,
+      "customer_id": 1,
+      "plan_id": 1,
+      "phone_number": "9345899429",
+      "activation_date": "2026-04-09T14:21:51.581178",
+      "expiry_date": "2026-07-02T14:21:51.581178"
+    },
+    {
+      "subscription_id": 5,
+      "customer_id": 2,
+      "plan_id": 1,
+      "phone_number": "9500459161",
+      "activation_date": "2025-11-20T14:39:50.728956",
+      "expiry_date": "2026-02-12T14:39:50.728956"
+    },
+    {
+      "subscription_id": 6,
+      "customer_id": 2,
+      "plan_id": 2,
+      "phone_number": "9500459161",
+      "activation_date": "2026-02-12T14:39:50.728956",
+      "expiry_date": "2026-04-09T14:39:50.728956"
+    },
+    {
+      "subscription_id": 7,
+      "customer_id": 2,
+      "plan_id": 4,
+      "phone_number": "9500459161",
+      "activation_date": "2025-11-20T14:43:28.954003",
+      "expiry_date": "2025-11-21T14:43:28.954003"
+    },
+    {
+      "subscription_id": 8,
+      "customer_id": 10,
+      "plan_id": 2,
+      "phone_number": "9952574455",
+      "activation_date": "2026-02-12T14:30:35.690574",
+      "expiry_date": "2026-04-09T14:30:35.690574"
+    },
+    {
+      "subscription_id": 9,
+      "customer_id": 10,
+      "plan_id": 1,
+      "phone_number": "9952574455",
+      "activation_date": "2026-04-09T14:30:35.690574",
+      "expiry_date": "2026-07-02T14:30:35.690574"
+    },
+    {
+      "subscription_id": 10,
+      "customer_id": 11,
+      "plan_id": 2,
+      "phone_number": "9003704250",
+      "activation_date": "2025-11-20T15:48:03.062246",
+      "expiry_date": "2026-01-15T15:48:03.062246"
+    },
+    {
+      "subscription_id": 11,
+      "customer_id": 11,
+      "plan_id": 1,
+      "phone_number": "9003704250",
+      "activation_date": "2026-01-15T15:48:03.062246",
+      "expiry_date": "2026-04-09T15:48:03.062246"
+    }
+  ],
+  "metadata": {
+    "backup_timestamp": "2025-11-21T07:01:09.785056",
+    "total_customers": 6,
+    "total_plans": 7,
+    "total_transactions": 11,
+    "total_active_subscriptions": 11,
+    "data_version": "1.0"
+  }
+}

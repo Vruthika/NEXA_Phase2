@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     # ============================================
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
+    # ============================================
+    # BACKUP SETTINGS
+    # ============================================
+    MAX_BACKUPS: int = 50  # Maximum number of backups to keep
+    BACKUP_DIR: str = "backups"
+    DEFAULT_BACKUP_TIME: str = "02:00"  # 2 AM
+    
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
