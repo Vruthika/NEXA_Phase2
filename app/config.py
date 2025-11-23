@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     # DATABASE CONFIGURATION
     # ============================================
     DATABASE_URL: str
-    MONGODB_URL: Optional[str] = None  # Optional for CMS
+    MONGODB_URL: Optional[str] = "mongodb://localhost:27017"  
     
     # ============================================
     # JWT AUTHENTICATION
@@ -45,14 +45,24 @@ class Settings(BaseSettings):
     # ============================================
     # BACKUP SETTINGS
     # ============================================
-    MAX_BACKUPS: int = 50  # Maximum number of backups to keep
+    MAX_BACKUPS: int = 50  
     BACKUP_DIR: str = "backups"
-    DEFAULT_BACKUP_TIME: str = "02:00"  # 2 AM
+    DEFAULT_BACKUP_TIME: str = "02:00"  
     
     
     class Config:
         env_file = ".env"
         case_sensitive = False
-        extra = "ignore"  # Ignore any extra variables
+        extra = "ignore"  
+        
+    # ============================================
+    # MONGODB SETTINGS
+    # ============================================
+    MONGODB_DATABASE: str = "nexa_cms"
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+        extra = "ignore" 
 
 settings = Settings()

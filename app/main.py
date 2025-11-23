@@ -1,9 +1,11 @@
+from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.config import settings
 
 # Import routes
+from app.mongo import close_mongo_client, get_mongo_client, get_mongo_db
 from app.routes import auth
 from app.routes.admin import admin_router, category_router, plan_router, offer_router, transactions_router, subscription_router, customer_router, dashboard_router
 from app.routes.customer import profile_router, plans_offers_router, recharge_router, transaction_router, subscriptions_router
@@ -19,8 +21,8 @@ from app.routes.admin_notifications import router as admin_notifications_router
 from app.routes.admin_analytics import router as analytics_router
 from app.routes.admin_report import router as reports_router
 from app.routes.admin_backup_restore import router as backup_restore_router
-
-
+from app.routes.admin_cms import router as admin_cms_router
+from app.routes.customer_cms import router as customer_cms_router
 
 import asyncio
 from app.services.background_tasks import process_expired_subscriptions_periodically
@@ -43,6 +45,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# MongoDB connection events - FIXED VERSION
+@app.on_event("startup")
+async def startup_event():
+    # Initialize MongoDB connection and store in app state
+    client = get_mongo_client()
+    app.state.mongo_client = client
+    app.state.mongo_db = get_mongo_db()
+    
+    # Test the connection
+    try:
+        await client.admin.command('ping')
+        print("✅ MongoDB connection established successfully")
+    except Exception as e:
+        print(f"❌ MongoDB connection failed: {e}")
+        raise e
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Close MongoDB connection
+    close_mongo_client()
+    print("MongoDB connection closed")
+
+# Include all your routers...
 app.include_router(auth.router)
 # Customer-facing routes
 app.include_router(profile_router)
@@ -57,7 +82,7 @@ app.include_router(secondary_numbers_router)
 app.include_router(customer_linked_accounts_router)
 app.include_router(customer_referral_router)
 app.include_router(customer_notifications_router)
-
+app.include_router(customer_cms_router)
 
 # Admin-only routes
 app.include_router(admin_router, prefix="/admin")
@@ -74,9 +99,25 @@ app.include_router(admin_referral_router, prefix="/admin")
 app.include_router(admin_notifications_router, prefix="/admin")
 app.include_router(analytics_router, prefix="/admin")
 app.include_router(backup_restore_router, prefix="/admin")
-# app.include_router(reports_router, prefix="/api/v1")
-# app.include_router(dashboard_router, prefix="/admin")
+app.include_router(admin_cms_router, prefix="/admin")
 
+@app.get("/health")
+async def health_check():
+    try:
+        # Test MongoDB connection
+        client = get_mongo_client()
+        await client.admin.command('ping')
+        return {
+            "status": "healthy",
+            "database": "MongoDB connected",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": f"MongoDB connection failed: {str(e)}",
+            "timestamp": datetime.utcnow().isoformat()
+        }
     
 if __name__ == "__main__":
     import uvicorn
@@ -86,4 +127,3 @@ if __name__ == "__main__":
         port=8000, 
         reload=settings.DEBUG
     )
-    
