@@ -104,16 +104,86 @@ async def change_customer_password(
 # ==========================================================
 plans_offers_router = APIRouter(prefix="/customer", tags=["View Plans & Offers"])
 
+@plans_offers_router.get("/categories")
+async def get_categories(
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all plan categories.
+    """
+    categories = db.query(Category).all()
+    return [{"category_id": cat.category_id, "category_name": cat.category_name} for cat in categories]
+
 @plans_offers_router.get("/plans", response_model=List[PlanResponseForCustomer])
 async def get_plans_for_customer(
+    plan_id: Optional[int] = Query(None, description="Get specific plan by ID"),
     plan_type: Optional[str] = Query(None, description="Filter by plan type"),
     category_id: Optional[int] = Query(None, description="Filter by category"),
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
 ):
     """
-    Get all available plans for customers.
+    Get all available plans for customers or a specific plan by ID.
     """
+    current_time = datetime.utcnow()
+    
+    # If plan_id is provided, return only that specific plan
+    if plan_id is not None:
+        plan = db.query(Plan).join(Category).filter(
+            Plan.plan_id == plan_id,
+            Plan.status == "active",
+            Plan.deleted_at.is_(None)
+        ).first()
+        
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Plan not found"
+            )
+        
+        # Check for active offers for this plan
+        active_offer = db.query(Offer).filter(
+            Offer.plan_id == plan.plan_id,
+            Offer.valid_from <= current_time,
+            Offer.valid_until >= current_time
+        ).first()
+        
+        has_active_offer = active_offer is not None
+        offer_id = active_offer.offer_id if active_offer else None
+        offer_price = float(active_offer.discounted_price) if active_offer else None
+        
+        # Calculate discount percentage if offer exists
+        discount_percentage = None
+        if active_offer:
+            discount_percentage = round(
+                ((float(plan.price) - float(active_offer.discounted_price)) / float(plan.price)) * 100, 
+                2
+            )
+        
+        return [PlanResponseForCustomer(
+            plan_id=plan.plan_id,
+            category_name=plan.category.category_name,
+            plan_name=plan.plan_name,
+            plan_type=plan.plan_type,
+            is_topup=plan.is_topup,
+            price=float(plan.price),
+            validity_days=plan.validity_days,
+            description=plan.description,
+            data_allowance_gb=float(plan.data_allowance_gb) if plan.data_allowance_gb else None,
+            daily_data_limit_gb=float(plan.daily_data_limit_gb) if plan.daily_data_limit_gb else None,
+            talktime_allowance_minutes=plan.talktime_allowance_minutes,
+            sms_allowance=plan.sms_allowance,
+            benefits=plan.benefits,
+            is_featured=plan.is_featured,
+            has_active_offer=has_active_offer,
+            offer_id=offer_id,
+            offer_price=offer_price,
+            discount_percentage=discount_percentage,
+            offer_valid_until=active_offer.valid_until.strftime('%d.%m.%Y %H:%M') if active_offer else None
+        )]
+    
+    # If no plan_id provided, return all plans with optional filtering
     query = db.query(Plan).join(Category).filter(
         Plan.status == "active",
         Plan.deleted_at.is_(None)
@@ -126,7 +196,6 @@ async def get_plans_for_customer(
         query = query.filter(Plan.category_id == category_id)
     
     plans = query.all()
-    current_time = datetime.utcnow()
     
     response_plans = []
     for plan in plans:
@@ -173,70 +242,6 @@ async def get_plans_for_customer(
     
     return response_plans
 
-@plans_offers_router.get("/plans/{plan_id}", response_model=PlanResponseForCustomer)
-async def get_plan_details(
-    plan_id: int,
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get detailed information about a specific plan.
-    """
-    plan = db.query(Plan).join(Category).filter(
-        Plan.plan_id == plan_id,
-        Plan.status == "active",
-        Plan.deleted_at.is_(None)
-    ).first()
-    
-    if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Plan not found"
-        )
-    
-    current_time = datetime.utcnow()
-    
-    # Check for active offers for this plan - FIXED QUERY
-    active_offer = db.query(Offer).filter(
-        Offer.plan_id == plan.plan_id,
-        Offer.valid_from <= current_time,
-        Offer.valid_until >= current_time
-    ).first()
-    
-    has_active_offer = active_offer is not None
-    offer_id = active_offer.offer_id if active_offer else None
-    offer_price = float(active_offer.discounted_price) if active_offer else None
-    
-    # Calculate discount percentage if offer exists
-    discount_percentage = None
-    if active_offer:
-        discount_percentage = round(
-            ((float(plan.price) - float(active_offer.discounted_price)) / float(plan.price)) * 100, 
-            2
-        )
-    
-    return PlanResponseForCustomer(
-        plan_id=plan.plan_id,
-        category_name=plan.category.category_name,
-        plan_name=plan.plan_name,
-        plan_type=plan.plan_type,
-        is_topup=plan.is_topup,
-        price=float(plan.price),
-        validity_days=plan.validity_days,
-        description=plan.description,
-        data_allowance_gb=float(plan.data_allowance_gb) if plan.data_allowance_gb else None,
-        daily_data_limit_gb=float(plan.daily_data_limit_gb) if plan.daily_data_limit_gb else None,
-        talktime_allowance_minutes=plan.talktime_allowance_minutes,
-        sms_allowance=plan.sms_allowance,
-        benefits=plan.benefits,
-        is_featured=plan.is_featured,
-        has_active_offer=has_active_offer,
-        offer_id=offer_id,
-        offer_price=offer_price,
-        discount_percentage=discount_percentage,
-        offer_valid_until=active_offer.valid_until.strftime('%d.%m.%Y %H:%M') if active_offer else None
-    )
-    
 @plans_offers_router.get("/offers", response_model=List[OfferResponseForCustomer])
 async def get_offers_for_customer(
     plan_id: Optional[int] = Query(None, description="Filter by plan"),
@@ -277,17 +282,6 @@ async def get_offers_for_customer(
         ))
     
     return response_offers
-
-@plans_offers_router.get("/categories")
-async def get_categories(
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get all plan categories.
-    """
-    categories = db.query(Category).all()
-    return [{"category_id": cat.category_id, "category_name": cat.category_name} for cat in categories]
 
 
 # ==========================================================
@@ -588,17 +582,43 @@ transaction_router = APIRouter(prefix="/customer", tags=["View Transactions"])
 
 @transaction_router.get("/transactions", response_model=List[CustomerTransactionResponse])
 async def get_customer_transactions(
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
+    transaction_id: Optional[int] = Query(None, description="Get specific transaction by ID"),
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
 ):
     """
-    Get customer's transaction history.
+    Get customer's transaction history or a specific transaction by ID.
     """
-    transactions = crud_customer.get_customer_transactions(
-        db, current_customer.customer_id, skip=skip, limit=limit
-    )
+    if transaction_id is not None:
+        transaction = db.query(Transaction).filter(
+            Transaction.transaction_id == transaction_id,
+            Transaction.customer_id == current_customer.customer_id
+        ).first()
+        
+        if not transaction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transaction not found"
+            )
+        
+        plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
+        
+        return [CustomerTransactionResponse(
+            transaction_id=transaction.transaction_id,
+            plan_name=plan.plan_name if plan else "Unknown",
+            recipient_phone_number=transaction.recipient_phone_number,
+            transaction_type=transaction.transaction_type,
+            original_amount=float(transaction.original_amount),
+            discount_amount=float(transaction.discount_amount),
+            final_amount=float(transaction.final_amount),
+            payment_method=transaction.payment_method,
+            payment_status=transaction.payment_status,
+            transaction_date=transaction.transaction_date
+        )]
+    
+    transactions = db.query(Transaction).filter(
+        Transaction.customer_id == current_customer.customer_id
+    ).order_by(Transaction.transaction_date.desc()).all()
     
     response_transactions = []
     for transaction in transactions:
@@ -619,41 +639,6 @@ async def get_customer_transactions(
     
     return response_transactions
 
-@transaction_router.get("/transactions/{transaction_id}", response_model=CustomerTransactionResponse)
-async def get_customer_transaction(
-    transaction_id: int,
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get detailed information about a specific transaction.
-    """
-    transaction = db.query(Transaction).filter(
-        Transaction.transaction_id == transaction_id,
-        Transaction.customer_id == current_customer.customer_id
-    ).first()
-    
-    if not transaction:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found"
-        )
-    
-    plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
-    
-    return CustomerTransactionResponse(
-        transaction_id=transaction.transaction_id,
-        plan_name=plan.plan_name if plan else "Unknown",
-        recipient_phone_number=transaction.recipient_phone_number,
-        transaction_type=transaction.transaction_type,
-        original_amount=float(transaction.original_amount),
-        discount_amount=float(transaction.discount_amount),
-        final_amount=float(transaction.final_amount),
-        payment_method=transaction.payment_method,
-        payment_status=transaction.payment_status,
-        transaction_date=transaction.transaction_date
-    )
-
 # ==========================================================
 # 📱 SUBSCRIPTION MANAGEMENT
 # ==========================================================
@@ -663,6 +648,9 @@ subscriptions_router = APIRouter(prefix="/customer", tags=["View Subscriptions"]
 async def get_customer_active_subscriptions(current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
 ):
+    """
+    Get customer's active subscription.
+    """
     from app.services.subscription_service import subscription_service
     
     # Process expired subscriptions before returning data

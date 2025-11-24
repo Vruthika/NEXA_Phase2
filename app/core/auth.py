@@ -3,7 +3,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import Admin, Customer
-from app.core.security import verify_token
+from app.core.security import verify_token, is_token_blacklisted
+from app.crud.crud_token import crud_token
 
 security = HTTPBearer()
 
@@ -16,6 +17,13 @@ def get_current_admin(
         detail="Admin access required. Invalid admin token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # Check if token is blacklisted
+    if crud_token.is_token_blacklisted(db, credentials.credentials):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please login again.",
+        )
     
     payload = verify_token(credentials.credentials)
     if not payload:
@@ -49,6 +57,13 @@ def get_current_customer(
         detail="Customer access required. Invalid customer token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # Check if token is blacklisted
+    if crud_token.is_token_blacklisted(db, credentials.credentials):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked. Please login again.",
+        )
     
     payload = verify_token(credentials.credentials)
     if not payload:

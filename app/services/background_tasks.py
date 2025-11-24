@@ -6,6 +6,7 @@ from app.database import SessionLocal
 from app.services.subscription_service import subscription_service
 from app.services.automated_notifications import automated_notifications
 from app.models.models import Subscription, ActiveTopup, PostpaidActivation
+from app.crud.crud_token import crud_token
 
 async def process_expired_subscriptions_periodically():
     """Background task to process expired subscriptions every hour"""
@@ -142,30 +143,10 @@ async def check_postpaid_due_dates(db: Session):
         print(f"💳 Sent due date notification for postpaid activation {activation.activation_id}")
         
 
-    """Check for postpaid bills due soon"""
-    current_time = datetime.utcnow()
-    due_threshold = current_time + timedelta(days=3)  # 3 days before due
-    
-    due_activations = db.query(PostpaidActivation).filter(
-        PostpaidActivation.billing_cycle_end <= due_threshold,
-        PostpaidActivation.billing_cycle_end > current_time,
-        PostpaidActivation.status == 'active'
-    ).all()
-    
-    for activation in due_activations:
-        days_until_due = (activation.billing_cycle_end - current_time).days
-        
-        # Create due date notification
-        from app.services.notification_service import notification_service
-        from app.schemas.notification import NotificationCreate
-        
-        notification_data = NotificationCreate(
-            customer_id=activation.customer_id,
-            title="📅 Postpaid Bill Due Soon",
-            message=f"Your postpaid bill of ₹{activation.total_amount_due} is due in {days_until_due} days. Please pay before {activation.billing_cycle_end.strftime('%d %b %Y')}.",
-            type="postpaid_due_date",
-            channel="push"
-        )
-        
-        notification_service.create_and_send_notification(db, notification_data)
-        print(f"💳 Sent due date notification for postpaid activation {activation.activation_id}")
+def cleanup_expired_tokens(db: Session):
+    """Clean up expired blacklisted tokens"""
+    try:
+        deleted_count = crud_token.cleanup_expired_tokens(db)
+        print(f"Cleaned up {deleted_count} expired blacklisted tokens")
+    except Exception as e:
+        print(f"Error cleaning up expired tokens: {e}")

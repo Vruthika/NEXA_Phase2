@@ -5,46 +5,9 @@ from .customer_operations import *
 from .offer import *
 from .plan import *
 from .transaction import *
-
-# Import postpaid schemas
-from .postpaid import (
-    PostpaidPlanResponse,
-    PostpaidActivationRequest, 
-    PostpaidActivationResponse,
-    PostpaidBillResponse,
-    DataAddonPurchaseRequest,
-    DataAddonResponse,
-    SecondaryNumberRequest,
-    SecondaryNumberResponse,
-    PostpaidUsageResponse,
-    BillPaymentRequest,
-    PostpaidActivationFilter,
-    PostpaidActivationDetailResponse
-)
-
-# Import referral schemas
-from .referral import (
-    ReferralProgramBase,
-    ReferralProgramCreate,
-    ReferralProgramResponse,
-    ReferralDiscountResponse,
-    ReferralUsageLogResponse,
-    ReferralStatsResponse,
-    ReferralApplyRequest,
-    ReferralApplyResponse,
-    ReferralConfig,  # This was missing
-    SystemReferralStats
-)
-
-# Import linked account schemas
-from .linked_account import (
-    LinkedAccountBase,
-    LinkedAccountCreate,
-    LinkedAccountResponse,
-    LinkedAccountDetailResponse,
-    RechargeLinkedRequest,
-    RechargeLinkedResponse
-)
+from .postpaid import *
+from .referral import *
+from .linked_account import *
 
 __all__ = [
     # Admin schemas
@@ -73,36 +36,16 @@ __all__ = [
     "TransactionBase", "TransactionResponse", "TransactionFilter", "TransactionExportRequest",
     
     # Postpaid schemas
-    "PostpaidPlanResponse",
-    "PostpaidActivationRequest", 
-    "PostpaidActivationResponse",
-    "PostpaidBillResponse",
-    "DataAddonPurchaseRequest",
-    "DataAddonResponse", 
-    "SecondaryNumberRequest",
-    "SecondaryNumberResponse",
-    "PostpaidUsageResponse",
-    "BillPaymentRequest",
-    "PostpaidActivationFilter",
-    "PostpaidActivationDetailResponse",
+    "PostpaidPlanResponse", "PostpaidActivationRequest", "PostpaidActivationResponse", "PostpaidBillResponse",
+    "DataAddonPurchaseRequest", "DataAddonResponse", "SecondaryNumberRequest", "SecondaryNumberResponse",
+    "PostpaidUsageResponse", "BillPaymentRequest", "PostpaidActivationFilter", "PostpaidActivationDetailResponse",
     
     # Referral schemas
-    "ReferralProgramBase",
-    "ReferralProgramCreate",
-    "ReferralProgramResponse",
-    "ReferralDiscountResponse",
-    "ReferralUsageLogResponse",
-    "ReferralStatsResponse",
-    "ReferralApplyRequest",
-    "ReferralApplyResponse",
-    "ReferralConfig",  # This was missing
-    "SystemReferralStats",
+    "ReferralProgramBase", "ReferralProgramCreate", "ReferralProgramResponse", "ReferralDiscountResponse",
+    "ReferralUsageLogResponse", "ReferralStatsResponse", "ReferralApplyRequest", "ReferralApplyResponse",
+    "ReferralConfig", "SystemReferralStats",
     
     # Linked Account schemas
-    "LinkedAccountBase",
-    "LinkedAccountCreate", 
-    "LinkedAccountResponse",
-    "LinkedAccountDetailResponse",
-    "RechargeLinkedRequest",
-    "RechargeLinkedResponse"
+    "LinkedAccountBase", "LinkedAccountCreate", "LinkedAccountResponse",
+    "LinkedAccountDetailResponse", "RechargeLinkedRequest", "RechargeLinkedResponse"
 ]

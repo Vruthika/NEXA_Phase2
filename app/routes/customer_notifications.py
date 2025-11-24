@@ -1,4 +1,3 @@
-# app/routes/customer_notifications.py
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -14,8 +13,6 @@ router = APIRouter(prefix="/customer/notifications", tags=["Customer Notificatio
 @router.get("/", response_model=List[NotificationResponse])
 async def get_my_notifications(
     unread_only: bool = Query(False, description="Show only unread notifications"),
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
 ):
@@ -23,7 +20,7 @@ async def get_my_notifications(
     Get current customer's notifications
     """
     notifications = crud_notification.get_customer_notifications(
-        db, current_customer.customer_id, skip=skip, limit=limit, unread_only=unread_only
+        db, current_customer.customer_id, unread_only=unread_only
     )
     return notifications
 
@@ -33,7 +30,7 @@ async def get_notification_stats(
     db: Session = Depends(get_db)
 ):
     """
-    Get notification statistics for current customer - shows received_today
+    Get notification statistics for customer
     """
     stats = crud_notification.get_notification_stats(db, current_customer.customer_id)
     return NotificationStats(**stats)
@@ -60,14 +57,3 @@ async def mark_all_notifications_as_read(
     """
     count = crud_notification.mark_all_as_read(db, current_customer.customer_id)
     return {"message": f"Marked all {count} notifications as read"}
-
-@router.get("/unread-count")
-async def get_unread_count(
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get count of unread notifications
-    """
-    stats = crud_notification.get_notification_stats(db, current_customer.customer_id)
-    return {"unread_count": stats["unread_count"]}

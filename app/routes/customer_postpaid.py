@@ -18,12 +18,31 @@ plans_addons_router = APIRouter(prefix="/customer/postpaid", tags=["View Postpai
 
 @plans_addons_router.get("/plans", response_model=List[PostpaidPlanResponse])
 async def get_postpaid_plans(
+    plan_id: Optional[int] = Query(None, description="Get specific postpaid plan by ID"),
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db)
 ):
     """
-    Get all available postpaid plans.
+    Get all available postpaid plans or a specific postpaid plan by ID.
     """
+    # If plan_id is provided, return only that specific postpaid plan
+    if plan_id is not None:
+        plan = db.query(Plan).filter(
+            Plan.plan_id == plan_id,
+            Plan.plan_type == "postpaid",
+            Plan.status == "active",
+            Plan.deleted_at.is_(None)
+        ).first()
+        
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Postpaid plan not found"
+            )
+        
+        return [plan]
+    
+    # If no plan_id provided, return all postpaid plans
     plans = db.query(Plan).filter(
         Plan.plan_type == "postpaid",
         Plan.status == "active",
@@ -31,30 +50,6 @@ async def get_postpaid_plans(
     ).all()
     
     return plans
-
-@plans_addons_router.get("/plans/{plan_id}", response_model=PostpaidPlanResponse)
-async def get_postpaid_plan_details(
-    plan_id: int,
-    current_customer: Customer = Depends(get_current_customer),
-    db: Session = Depends(get_db)
-):
-    """
-    Get detailed information about a specific postpaid plan.
-    """
-    plan = db.query(Plan).filter(
-        Plan.plan_id == plan_id,
-        Plan.plan_type == "postpaid",
-        Plan.status == "active",
-        Plan.deleted_at.is_(None)
-    ).first()
-    
-    if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Postpaid plan not found"
-        )
-    
-    return plan
 
 @plans_addons_router.get("/usage", response_model=PostpaidUsageResponse)
 async def get_data_usage(

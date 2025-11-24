@@ -1,4 +1,3 @@
-# app/schemas/customer.py
 from pydantic import BaseModel, validator
 from datetime import datetime
 from typing import Optional, List
@@ -48,7 +47,6 @@ class CustomerResponse(CustomerBase):
         from_attributes = True
 
 class CustomerDetailResponse(CustomerResponse):
-    # Additional details for admin view
     total_transactions: int = 0
     total_spent: float = 0.0
     active_subscriptions: int = 0

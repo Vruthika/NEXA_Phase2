@@ -49,7 +49,7 @@ async def get_cms_content(
     )
 
 @router.get("/headers", response_model=List[HeaderResponse])
-async def get_customer_headers(
+async def get_headers(
     db: AsyncIOMotorDatabase = Depends(get_mongo_db)
 ):
     """
@@ -66,7 +66,7 @@ async def get_customer_headers(
     return headers
 
 @router.get("/carousels", response_model=List[CarouselResponse])
-async def get_customer_carousels(
+async def get_carousels(
     db: AsyncIOMotorDatabase = Depends(get_mongo_db)
 ):
     """
@@ -83,7 +83,7 @@ async def get_customer_carousels(
     return carousels
 
 @router.get("/faqs", response_model=List[FAQResponse])
-async def get_customer_faqs(
+async def get_faqs(
     db: AsyncIOMotorDatabase = Depends(get_mongo_db)
 ):
     """

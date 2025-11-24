@@ -3,11 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.config import settings
+from app.models.models import BlacklistedToken
+
 
 # Import routes
 from app.mongo import close_mongo_client, get_mongo_client, get_mongo_db
 from app.routes import auth
-from app.routes.admin import admin_router, category_router, plan_router, offer_router, transactions_router, subscription_router, customer_router, dashboard_router
+from app.routes.admin import admin_router, category_router, plan_router, offer_router, transactions_router, subscription_router, customer_router
 from app.routes.customer import profile_router, plans_offers_router, recharge_router, transaction_router, subscriptions_router
 from app.routes.customer_postpaid import plans_addons_router, activations_router,bill_router,secondary_numbers_router
 from app.routes.admin_postpaid import router as admin_postpaid_activations_router
@@ -67,7 +69,6 @@ async def shutdown_event():
     close_mongo_client()
     print("MongoDB connection closed")
 
-# Include all your routers...
 app.include_router(auth.router)
 # Customer-facing routes
 app.include_router(profile_router)
@@ -101,24 +102,7 @@ app.include_router(analytics_router, prefix="/admin")
 app.include_router(backup_restore_router, prefix="/admin")
 app.include_router(admin_cms_router, prefix="/admin")
 
-@app.get("/health")
-async def health_check():
-    try:
-        # Test MongoDB connection
-        client = get_mongo_client()
-        await client.admin.command('ping')
-        return {
-            "status": "healthy",
-            "database": "MongoDB connected",
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "database": f"MongoDB connection failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    
+   
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

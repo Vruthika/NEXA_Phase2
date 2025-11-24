@@ -25,7 +25,7 @@ import io
 import json
 
 # ==========================================================
-# 🧑‍💼 ADMIN MANAGEMENT ROUTES
+# ADMIN MANAGEMENT ROUTES
 # ==========================================================
 admin_router = APIRouter(prefix="/admins", tags=["Admin Management"])
 
@@ -89,7 +89,7 @@ async def change_password(
 
 
 # ==========================================================
-# 🏷️ CATEGORY MANAGEMENT ROUTES
+# CATEGORY MANAGEMENT ROUTES
 # ==========================================================
 category_router = APIRouter(prefix="/categories", tags=["Category Management"])
 
@@ -133,7 +133,7 @@ async def delete_category(
 
 
 # ==========================================================
-# 📦 PLAN MANAGEMENT ROUTES
+# PLAN MANAGEMENT ROUTES
 # ==========================================================
 plan_router = APIRouter(prefix="/plans", tags=["Plan Management"])
 
@@ -218,7 +218,7 @@ async def delete_plan(
     return {"message": "Plan deleted successfully"}
 
 # ==========================================================
-# 🎁 OFFER MANAGEMENT ROUTES
+# OFFER MANAGEMENT ROUTES
 # ==========================================================
 offer_router = APIRouter(prefix="/offers", tags=["Offer Management"])
 
@@ -533,7 +533,7 @@ async def delete_offer(
 
 
 # ==========================================================
-# 💳 TRANSACTION MONITORING ROUTES
+# TRANSACTION MONITORING ROUTES
 # ==========================================================
 transactions_router = APIRouter(prefix="/transactions", tags=["Transaction Monitoring"])
 
@@ -635,90 +635,90 @@ async def get_transaction(
     
     return TransactionResponse(**response_data)
 
-@transactions_router.post("/export")
-async def export_transactions(
-    export_request: TransactionExportRequest,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Export transactions in CSV or JSON format.
-    """
-    transactions_with_details = crud_transaction.get_all_with_details(
-        db, filter=export_request, skip=0, limit=10000  # Increased limit for export
-    )
+# @transactions_router.post("/export")
+# async def export_transactions(
+#     export_request: TransactionExportRequest,
+#     current_admin: Admin = Depends(get_current_admin),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Export transactions in CSV or JSON format.
+#     """
+#     transactions_with_details = crud_transaction.get_all_with_details(
+#         db, filter=export_request, skip=0, limit=10000  # Increased limit for export
+#     )
     
-    if export_request.export_format.lower() == "csv":
-        output = io.StringIO()
-        writer = csv.writer(output)
+#     if export_request.export_format.lower() == "csv":
+#         output = io.StringIO()
+#         writer = csv.writer(output)
         
-        # Write header
-        writer.writerow([
-            "Transaction ID", "Customer", "Customer Phone", "Plan", "Offer",
-            "Transaction Type", "Original Amount", "Discount", "Final Amount",
-            "Payment Method", "Payment Status", "Transaction Date"
-        ])
+#         # Write header
+#         writer.writerow([
+#             "Transaction ID", "Customer", "Customer Phone", "Plan", "Offer",
+#             "Transaction Type", "Original Amount", "Discount", "Final Amount",
+#             "Payment Method", "Payment Status", "Transaction Date"
+#         ])
         
-        # Write data
-        for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
-            writer.writerow([
-                transaction.transaction_id,
-                cust_name or "",
-                cust_phone or "",
-                plan_name or "",
-                offer_name or "",
-                transaction.transaction_type.value,
-                float(transaction.original_amount),
-                float(transaction.discount_amount),
-                float(transaction.final_amount),
-                transaction.payment_method.value,
-                transaction.payment_status.value,
-                transaction.transaction_date.isoformat()
-            ])
+#         # Write data
+#         for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
+#             writer.writerow([
+#                 transaction.transaction_id,
+#                 cust_name or "",
+#                 cust_phone or "",
+#                 plan_name or "",
+#                 offer_name or "",
+#                 transaction.transaction_type.value,
+#                 float(transaction.original_amount),
+#                 float(transaction.discount_amount),
+#                 float(transaction.final_amount),
+#                 transaction.payment_method.value,
+#                 transaction.payment_status.value,
+#                 transaction.transaction_date.isoformat()
+#             ])
         
-        content = output.getvalue()
-        output.close()
+#         content = output.getvalue()
+#         output.close()
         
-        return Response(
-            content=content,
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=transactions_export.csv"}
-        )
+#         return Response(
+#             content=content,
+#             media_type="text/csv",
+#             headers={"Content-Disposition": "attachment; filename=transactions_export.csv"}
+#         )
     
-    elif export_request.export_format.lower() == "json":
-        transactions_list = []
-        for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
-            transactions_list.append({
-                "transaction_id": transaction.transaction_id,
-                "customer_name": cust_name,
-                "customer_phone": cust_phone,
-                "plan_name": plan_name,
-                "offer_name": offer_name,
-                "transaction_type": transaction.transaction_type.value,
-                "original_amount": float(transaction.original_amount),
-                "discount_amount": float(transaction.discount_amount),
-                "final_amount": float(transaction.final_amount),
-                "payment_method": transaction.payment_method.value,
-                "payment_status": transaction.payment_status.value,
-                "transaction_date": transaction.transaction_date.isoformat()
-            })
+#     elif export_request.export_format.lower() == "json":
+#         transactions_list = []
+#         for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
+#             transactions_list.append({
+#                 "transaction_id": transaction.transaction_id,
+#                 "customer_name": cust_name,
+#                 "customer_phone": cust_phone,
+#                 "plan_name": plan_name,
+#                 "offer_name": offer_name,
+#                 "transaction_type": transaction.transaction_type.value,
+#                 "original_amount": float(transaction.original_amount),
+#                 "discount_amount": float(transaction.discount_amount),
+#                 "final_amount": float(transaction.final_amount),
+#                 "payment_method": transaction.payment_method.value,
+#                 "payment_status": transaction.payment_status.value,
+#                 "transaction_date": transaction.transaction_date.isoformat()
+#             })
         
-        content = json.dumps(transactions_list, indent=2)
+#         content = json.dumps(transactions_list, indent=2)
         
-        return Response(
-            content=content,
-            media_type="application/json",
-            headers={"Content-Disposition": "attachment; filename=transactions_export.json"}
-        )
+#         return Response(
+#             content=content,
+#             media_type="application/json",
+#             headers={"Content-Disposition": "attachment; filename=transactions_export.json"}
+#         )
     
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported export format. Use 'csv' or 'json'."
-        )
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Unsupported export format. Use 'csv' or 'json'."
+#         )
 
 # ==========================================================
-# 📱 SUBSCRIPTION MANAGEMENT ROUTES
+# SUBSCRIPTION MANAGEMENT ROUTES
 # ==========================================================
 subscription_router = APIRouter(prefix="/subscriptions", tags=["Subscription Management"])
 
@@ -811,7 +811,7 @@ async def get_activation_queue(
 
 
 # ==========================================================
-# 👥 CUSTOMER MANAGEMENT ROUTES
+# CUSTOMER MANAGEMENT ROUTES
 # ==========================================================
 customer_router = APIRouter(prefix="/customers", tags=["Customer Management"])
 
@@ -1043,35 +1043,3 @@ async def deactivate_customer(
         )
     
     return {"message": "Customer account deactivated successfully", "customer_id": customer_id}
-
-# ==========================================================
-# 📊 DASHBOARD ANALYTICS ROUTES
-# ==========================================================
-dashboard_router = APIRouter(prefix="/dashboard", tags=["Dashboard Analytics"])
-
-@dashboard_router.get("/")
-async def get_dashboard_stats(
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    total_customers = db.query(Customer).count()
-    active_customers = db.query(Customer).filter(Customer.account_status == "active").count()
-    total_transactions = db.query(Transaction).count()
-
-    today = datetime.utcnow().date()
-    todays_transactions = db.query(Transaction).filter(
-        func.date(Transaction.transaction_date) == today
-    ).count()
-
-    total_revenue_result = db.query(func.sum(Transaction.final_amount)).filter(
-        Transaction.payment_status == "success"
-    ).first()
-    total_revenue = float(total_revenue_result[0]) if total_revenue_result[0] else 0.0
-
-    return {
-        "total_customers": total_customers,
-        "active_customers": active_customers,
-        "total_transactions": total_transactions,
-        "todays_transactions": todays_transactions,
-        "total_revenue": total_revenue
-    }

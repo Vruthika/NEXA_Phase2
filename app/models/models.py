@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, DateTime, Boolean, Enum, Text,
+    Column, Index, String, Integer, BigInteger, DateTime, Boolean, Enum, Text,
     DECIMAL, JSON, ForeignKey, Date, CheckConstraint, func
 )
 from sqlalchemy.orm import relationship, declarative_base
@@ -530,3 +530,16 @@ class Restore(Base):
     
     # Relationships
     admin = relationship("Admin", back_populates="restores")
+    
+class BlacklistedToken(Base):
+    __tablename__ = "blacklisted_tokens"
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    token = Column(Text, nullable=False, unique=True)
+    token_type = Column(String(20), nullable=False)  # 'access' or 'refresh'
+    expires_at = Column(DateTime, nullable=False)
+    blacklisted_at = Column(DateTime, server_default=func.now())
+    reason = Column(String(100), default='logout')
+    
+    # Index for faster lookups
+    __table_args__ = (Index('idx_blacklisted_token', 'token'),)
