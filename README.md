@@ -1,12 +1,14 @@
 # NEXA Mobile Recharge System
 
-A comprehensive **FastAPI-based backend system** for managing prepaid and postpaid mobile recharge services, including customer management, subscription handling, linked accounts, referral programs, and real-time notifications.
+A scalable **FastAPI-based backend system** designed to manage end-to-end mobile recharge services including prepaid subscriptions, postpaid billing, top-ups, referral rewards, customer management, notifications, payments, analytics, and CMS content control.
 
-This backend powers a complete mobile recharge platform with features like plan browsing, recharge processing, postpaid billing, family account linking, referral rewards, and automated notifications.
+The platform supports secure authentication using JWT, real-time notification handling, dynamic CMS content via MongoDB, automated background tasks, and disaster-recovery backup/restore.
+
+This backend powers both customer applications and admin dashboards, following a modular service-driven architecture built for production-grade performance.
 
 ---
 
-## 🚀 Features
+## 🚀 Core Features
 
 ### 👥 Customer Management
 
@@ -87,7 +89,6 @@ This backend powers a complete mobile recharge platform with features like plan 
 | ORM              | SQLAlchemy   | 2.0.23+  |
 | Validation       | Pydantic     | 2.5.0+   |
 | Authentication   | JWT + bcrypt | -        |
-| Migrations       | Alembic      | 1.12.1+  |
 | Server           | Uvicorn      | 0.24.0+  |
 
 ---
@@ -196,27 +197,6 @@ BACKUP_DIR=backups
 DEFAULT_BACKUP_TIME=02:00
 ```
 
-### 6. Run Database Migrations
-
-```bash
-# Initialize Alembic (if not already done)
-alembic init alembic
-
-# Generate migration
-alembic revision --autogenerate -m "Initial migration"
-
-# Apply migrations
-alembic upgrade head
-```
-
-### 7. Create Admin User (Optional)
-
-```bash
-python seed_data.py
-```
-
----
-
 ## 🚀 Running the Application
 
 ### Development Mode
@@ -279,47 +259,75 @@ nexa-mobile-recharge/
 │   ├── core/                  # Core functionality (auth, security, config)
 │   │   ├── auth.py            # Authentication dependencies
 │   │   └── security.py        # JWT and password hashing
-│   ├── crud/                  # Database operations
+│   ├── crud
+│   │   ├── __init__.py
 │   │   ├── crud_admin.py
+│   │   ├── crud_backup_restore.py
+│   │   ├── crud_category.py
 │   │   ├── crud_customer.py
+│   │   ├── crud_linked_account.py
+│   │   ├── crud_notification.py
+│   │   ├── crud_offer.py
 │   │   ├── crud_plan.py
-│   │   ├── crud_transaction.py
 │   │   ├── crud_postpaid.py
 │   │   ├── crud_referral.py
-│   │   └── crud_notification.py
+│   │   ├── crud_subscription.py
+│   │   ├── crud_token.py
+│   │   └── crud_transaction.py
+│   ├── middleware
+│   │   ├── __init__.py
+│   │   ├── error_handling.py
+│   │   ├── logging_middleware.py
+│   │   ├── rate_limiting.py
+│   │   └── security_headers.py
 │   ├── models/                # SQLAlchemy models
 │   │   └── models.py
-│   ├── routes/                # API endpoints
-│   │   ├── auth.py
+│   ├── routes                 # API Endpoints
 │   │   ├── admin.py
-│   │   ├── customer.py
-│   │   ├── customer_postpaid.py
-│   │   ├── customer_referral.py
-│   │   ├── customer_notifications.py
 │   │   ├── admin_analytics.py
 │   │   ├── admin_backup_restore.py
-│   │   └── admin_cms.py
-│   ├── schemas/               # Pydantic schemas
-│   │   ├── admin.py
+│   │   ├── admin_cms.py
+│   │   ├── admin_linked_accounts.py
+│   │   ├── admin_notifications.py
+│   │   ├── admin_postpaid.py
+│   │   ├── admin_referral.py
+│   │   ├── auth.py
 │   │   ├── customer.py
+│   │   ├── customer_cms.py
+│   │   ├── customer_linked_accounts.py
+│   │   ├── customer_notifications.py
+│   │   ├── customer_postpaid.py
+│   │   └── customer_referral.py
+│   ├── schemas/               # Pydantic schemas
+│   │   ├── __init__.py
+│   │   ├── admin.py
+│   │   ├── analytics.py
+│   │   ├── backup_restore.py
+│   │   ├── category.py
+│   │   ├── cms.py
+│   │   ├── customer.py
+│   │   ├── customer_operations.py
+│   │   ├── linked_account.py
+│   │   ├── notification.py
+│   │   ├── offer.py
 │   │   ├── plan.py
-│   │   ├── transaction.py
 │   │   ├── postpaid.py
 │   │   ├── referral.py
-│   │   └── notification.py
+│   │   ├── token.py
+│   │   └── transaction.py
 │   ├── services/              # Business logic
-│   │   ├── subscription_service.py
-│   │   ├── notification_service.py
 │   │   ├── automated_notifications.py
+│   │   ├── background_tasks.py
+│   │   ├── backup_scheduler.py
 │   │   ├── backup_service.py
-│   │   └── background_tasks.py
+│   │   ├── notification_service.py
+│   │   └── subscription_service.py
 │   ├── utils/                 # Helper utilities
 │   │   └── mongo_utils.py
 │   ├── config.py              # Application configuration
 │   ├── database.py            # Database connection
 │   ├── mongo.py               # MongoDB connection
 │   └── main.py                # FastAPI application
-├── alembic/                   # Database migrations
 ├── backups/                   # Backup files
 ├── docs/                      # Documentation
 ├── .env                       # Environment variables
@@ -362,9 +370,11 @@ curl -X GET "http://localhost:8000/customer/profile" \
 
 ### Authentication
 
-- `POST /customer/login` - Customer login
-- `POST /customer/register` - Customer registration
 - `POST /admin/login` - Admin login
+- `POST /customer/register` - Customer registration
+- `POST /customer/login` - Customer login
+- `POST /refresh` - Refresh Token
+- `POST /logout` - Logout
 
 ### Customer - Profile
 
@@ -374,8 +384,8 @@ curl -X GET "http://localhost:8000/customer/profile" \
 
 ### Customer - Plans & Offers
 
-- `GET /customer/plans` - Browse plans
-- `GET /customer/plans/{plan_id}` - Plan details
+- `GET /customer/categories` - Category details
+- `GET /customer/plans` - Plan details
 - `GET /customer/offers` - View offers
 
 ### Customer - Recharge
@@ -429,21 +439,6 @@ curl -X GET "http://localhost:8000/customer/profile" \
 
 ---
 
-## 🧪 Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=app tests/
-
-# Run specific test file
-pytest tests/test_authentication.py
-```
-
----
-
 ## ⚠️ Common Issues & Troubleshooting
 
 ### Database Connection Error
@@ -484,20 +479,6 @@ lsof -i :8000
 
 # Kill the process
 kill -9 <PID>
-```
-
-### Migration Issues
-
-```
-alembic.util.exc.CommandError: Target database is not up to date
-```
-
-**Solution**:
-
-```bash
-# Reset migrations
-alembic downgrade base
-alembic upgrade head
 ```
 
 ---

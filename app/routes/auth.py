@@ -17,7 +17,7 @@ from app.schemas.token import Token, TokenRefresh, TokenResponse, LogoutResponse
 from datetime import timedelta
 from app.config import settings
 
-router = APIRouter(prefix="/analytics", tags=["Authentication"])
+router = APIRouter( tags=["Authentication"])
 security = HTTPBearer()
 
 # Admin Login with refresh token
