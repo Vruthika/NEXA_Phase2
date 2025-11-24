@@ -10,9 +10,7 @@
 
 ## 1. Executive Summary
 
-The NEXA Mobile Recharge System is a RESTful API-based application designed to manage prepaid and postpaid mobile recharge services. Built with FastAPI, PostgreSQL, and MongoDB, it provides secure, scalable endpoints for telecom operators to manage customer accounts, subscriptions, billing, and promotional programs.
-
----
+## The NEXA Mobile Recharge System is a RESTful API-based application designed to manage mobile telecommunications services including prepaid and postpaid plans, top-ups, referral programs, transactions, and customer management. Built with FastAPI, PostgreSQL, and MongoDB, it provides secure, scalable endpoints for telecom operators to manage customer subscriptions and billing.
 
 ## 2. System Overview
 
@@ -45,14 +43,14 @@ The NEXA Mobile Recharge System is a RESTful API-based application designed to m
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Client Layer                              │
+│                    Client Layer                             │
 │     (Web App, Mobile App, Third-party Integrations)         │
 └────────────────────────┬────────────────────────────────────┘
                          │ HTTPS/REST
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│                API Gateway / Load Balancer                   │
-│                    (nginx/Cloud LB)                          │
+│                API Gateway / Load Balancer                  │
+│                    (nginx/Cloud LB)                         │
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐

@@ -1,6 +1,6 @@
 # NEXA Mobile Recharge System
 **Version:** 1.0.0
-**Generated on:** 2025-11-24 11:16:16
+**Generated on:** 2025-11-24 16:13:18
 
 ---
 
@@ -347,7 +347,7 @@ Reorder items in carousel or FAQ collections
 
 ## Admin - Linked Accounts
 
-### `GET` /admin/admin/linked-accounts/
+### `GET` /admin/linked-accounts/
 **Get All Linked Accounts**
 
 Get all linked account relationships in the system.
@@ -355,8 +355,6 @@ Get all linked account relationships in the system.
 **Parameters:**
 - `primary_customer_id` (query) — Filter by primary customer
 - `linked_phone` (query) — Filter by linked phone number
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
 
 **Responses:**
 - `200` — Successful Response
@@ -364,7 +362,7 @@ Get all linked account relationships in the system.
 
 ---
 
-### `GET` /admin/admin/linked-accounts/customer/{customer_id}
+### `GET` /admin/linked-accounts/customer/{customer_id}
 **Get Customer Linked Relationships**
 
 Get all linked account relationships for a specific customer
@@ -379,7 +377,7 @@ Get all linked account relationships for a specific customer
 
 ---
 
-### `DELETE` /admin/admin/linked-accounts/{linked_account_id}
+### `DELETE` /admin/linked-accounts/{linked_account_id}
 **Admin Remove Linked Account**
 
 Admin: Remove any linked account relationship.
@@ -452,14 +450,6 @@ Admin: Get detailed referral information for a specific customer.
 
 ## Admin Management
 
-### `GET` /admin/admins/
-**Get All Admins**
-
-**Responses:**
-- `200` — Successful Response
-
----
-
 ### `POST` /admin/admins/
 **Create Admin**
 
@@ -474,11 +464,13 @@ Admin: Get detailed referral information for a specific customer.
 
 ---
 
-### `GET` /admin/admins/{admin_id}
-**Get Admin**
+### `GET` /admin/admins/
+**Get Admins**
+
+Get all admins or a specific admin by ID.
 
 **Parameters:**
-- `admin_id` (path) (required) — 
+- `admin_id` (query) — Get specific admin by ID
 
 **Responses:**
 - `200` — Successful Response
@@ -519,7 +511,7 @@ Admin: Get detailed referral information for a specific customer.
 
 ## Admin Notifications
 
-### `GET` /admin/admin/notifications/
+### `GET` /admin/notifications/
 **Get All Notifications**
 
 Admin: Get all notifications with filtering options
@@ -529,8 +521,6 @@ Admin: Get all notifications with filtering options
 - `notification_type` (query) — Filter by type
 - `channel` (query) — Filter by channel
 - `status` (query) — Filter by status
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
 
 **Responses:**
 - `200` — Successful Response
@@ -538,7 +528,7 @@ Admin: Get all notifications with filtering options
 
 ---
 
-### `POST` /admin/admin/notifications/send
+### `POST` /admin/notifications/send
 **Send Admin Notification**
 
 Admin: Send notification to one or multiple customers
@@ -554,7 +544,7 @@ Admin: Send notification to one or multiple customers
 
 ---
 
-### `GET` /admin/admin/notifications/stats
+### `GET` /admin/notifications/stats
 **Get Admin Notification Stats**
 
 Admin: Get system-wide notification statistics - shows sent_today
@@ -564,7 +554,7 @@ Admin: Get system-wide notification statistics - shows sent_today
 
 ---
 
-### `GET` /admin/admin/notifications/automated-stats
+### `GET` /admin/notifications/automated-stats
 **Get Automated Notification Stats**
 
 Get statistics about automated notifications
@@ -645,7 +635,7 @@ Get top performing plans by transaction count
 
 ## Authentication
 
-### `POST` /analytics/admin/login
+### `POST` /admin/login
 **Admin Login**
 
 **Request Body Example:**
@@ -659,7 +649,7 @@ Get top performing plans by transaction count
 
 ---
 
-### `POST` /analytics/customer/login
+### `POST` /customer/login
 **Customer Login**
 
 **Request Body Example:**
@@ -673,7 +663,7 @@ Get top performing plans by transaction count
 
 ---
 
-### `POST` /analytics/refresh
+### `POST` /refresh
 **Refresh Token**
 
 **Request Body Example:**
@@ -687,7 +677,7 @@ Get top performing plans by transaction count
 
 ---
 
-### `POST` /analytics/logout
+### `POST` /logout
 **Logout**
 
 Simple logout - just blacklists the access token
@@ -697,7 +687,7 @@ Simple logout - just blacklists the access token
 
 ---
 
-### `POST` /analytics/customer/register
+### `POST` /customer/register
 **Customer Register**
 
 Register a new customer account with optional referral code.
@@ -813,32 +803,16 @@ Get FAQ items for customer (public endpoint)
 ### `GET` /admin/customers/
 **Get Customers**
 
-Get all customers with filtering options.
+Get all customers, a specific customer by ID, or search customers with filtering options.
 
 **Parameters:**
+- `customer_id` (query) — Get specific customer by ID
 - `phone_number` (query) — Filter by phone number
 - `full_name` (query) — Filter by full name
 - `account_status` (query) — Filter by account status
 - `days_inactive_min` (query) — Minimum days inactive
 - `days_inactive_max` (query) — Maximum days inactive
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
-
----
-
-### `GET` /admin/customers/search
-**Search Customers**
-
-Search customers by phone number or name.
-
-**Parameters:**
-- `search_term` (query) (required) — Search by phone number or name
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
+- `search_term` (query) — Search by phone number or name
 
 **Responses:**
 - `200` — Successful Response
@@ -853,20 +827,6 @@ Get customer statistics.
 
 **Responses:**
 - `200` — Successful Response
-
----
-
-### `GET` /admin/customers/{customer_id}
-**Get Customer Details**
-
-Get detailed information about a specific customer.
-
-**Parameters:**
-- `customer_id` (path) (required) — 
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
 
 ---
 
@@ -1098,13 +1058,12 @@ Create a new offer by specifying discounted price directly.
 ### `GET` /admin/offers/
 **Get Offers**
 
-Get all offers with optional filtering by plan and status.
+Get all offers or a specific offer by ID with optional filtering.
 
 **Parameters:**
+- `offer_id` (query) — Get specific offer by ID
 - `plan_id` (query) — Filter by plan
 - `status` (query) — Filter by status (active/inactive/expired)
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
 
 **Responses:**
 - `200` — Successful Response
@@ -1155,20 +1114,6 @@ Get all currently active offers (valid_from <= current_time <= valid_until).
 
 ---
 
-### `GET` /admin/offers/{offer_id}
-**Get Offer**
-
-Get a specific offer by ID.
-
-**Parameters:**
-- `offer_id` (path) (required) — 
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
-
----
-
 ### `PUT` /admin/offers/{offer_id}
 **Update Offer**
 
@@ -1202,20 +1147,6 @@ Delete an offer.
 
 ---
 
-### `GET` /admin/offers/plan/{plan_id}
-**Get Offers By Plan**
-
-Get all offers for a specific plan.
-
-**Parameters:**
-- `plan_id` (path) (required) — 
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
-
----
-
 ## Plan Management
 
 ### `POST` /admin/plans/
@@ -1235,22 +1166,13 @@ Get all offers for a specific plan.
 ### `GET` /admin/plans/
 **Get Plans**
 
+Get all plans or a specific plan by ID with optional filtering.
+
 **Parameters:**
+- `plan_id` (query) — Get specific plan by ID
 - `plan_type` (query) — Filter by plan type
 - `category_id` (query) — Filter by category
 - `status` (query) — Filter by status
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
-
----
-
-### `GET` /admin/plans/{plan_id}
-**Get Plan**
-
-**Parameters:**
-- `plan_id` (path) (required) — 
 
 **Responses:**
 - `200` — Successful Response
@@ -1386,47 +1308,18 @@ Includes activations where customer is primary owner OR secondary number.
 ## Postpaid Activations Management
 
 ### `GET` /admin/postpaid/activations
-**Get All Postpaid Activations**
+**Get Postpaid Activations**
 
-Get all current postpaid activations with filtering options.
+Get all postpaid activations or a specific activation by ID with filtering options.
 Shows only active activations by default.
 
 **Parameters:**
+- `activation_id` (query) — Get specific activation by ID
 - `plan_id` (query) — Filter by plan
 - `status` (query) — Filter by status
 - `customer_phone` (query) — Filter by customer phone
 - `date_from` (query) — Filter from date
 - `date_to` (query) — Filter to date
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
-
----
-
-### `GET` /admin/postpaid/activations/{activation_id}
-**Get Postpaid Activation Details**
-
-Get detailed information about a specific postpaid activation.
-
-**Parameters:**
-- `activation_id` (path) (required) — 
-
-**Responses:**
-- `200` — Successful Response
-- `422` — Validation Error
-
----
-
-### `GET` /admin/postpaid/addons/{activation_id}
-**Get Activation Addons**
-
-Get all data addons for a specific activation.
-
-**Parameters:**
-- `activation_id` (path) (required) — 
 
 **Responses:**
 - `200` — Successful Response
@@ -1557,9 +1450,10 @@ Get the subscription activation queue.
 ### `GET` /admin/transactions/
 **Get Transactions**
 
-Get all transactions with filtering options.
+Get all transactions or a specific transaction by ID with filtering options.
 
 **Parameters:**
+- `transaction_id` (query) — Get specific transaction by ID
 - `customer_id` (query) — Filter by customer ID
 - `customer_phone` (query) — Filter by customer phone
 - `plan_id` (query) — Filter by plan
@@ -1568,8 +1462,6 @@ Get all transactions with filtering options.
 - `payment_method` (query) — Filter by payment method
 - `date_from` (query) — Filter from date
 - `date_to` (query) — Filter to date
-- `skip` (query) — Skip records
-- `limit` (query) — Limit records
 
 **Responses:**
 - `200` — Successful Response
@@ -1577,17 +1469,13 @@ Get all transactions with filtering options.
 
 ---
 
-### `GET` /admin/transactions/{transaction_id}
-**Get Transaction**
+### `POST` /admin/transactions/export
+**Export Transactions**
 
-Get detailed information about a specific transaction.
-
-**Parameters:**
-- `transaction_id` (path) (required) — 
+Export all transactions as CSV file.
 
 **Responses:**
 - `200` — Successful Response
-- `422` — Validation Error
 
 ---
 
