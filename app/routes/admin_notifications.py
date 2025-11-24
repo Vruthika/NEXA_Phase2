@@ -1,4 +1,3 @@
-# app/routes/admin_notifications.py
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import func
@@ -12,7 +11,7 @@ from app.schemas.notification import NotificationResponse, AdminNotificationCrea
 from app.crud.crud_notification import crud_notification
 from app.services.notification_service import notification_service
 
-router = APIRouter(prefix="/admin/notifications", tags=["Admin Notifications"])
+router = APIRouter(prefix="/notifications", tags=["Admin Notifications"])
 
 @router.get("/", response_model=List[NotificationResponse])
 async def get_all_notifications(
@@ -20,8 +19,6 @@ async def get_all_notifications(
     notification_type: Optional[NotificationType] = Query(None, description="Filter by type"),
     channel: Optional[NotificationChannel] = Query(None, description="Filter by channel"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -29,7 +26,7 @@ async def get_all_notifications(
     Admin: Get all notifications with filtering options
     """
     notifications = crud_notification.get_all_notifications(
-        db, skip=skip, limit=limit, customer_id=customer_id, 
+        db, customer_id=customer_id, 
         type=notification_type, channel=channel, status=status
     )
     return notifications

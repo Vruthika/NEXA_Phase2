@@ -8,14 +8,12 @@ from app.core.auth import get_current_admin
 from app.schemas.linked_account import LinkedAccountResponse
 from app.crud.crud_linked_account import crud_linked_account
 
-router = APIRouter(prefix="/admin/linked-accounts", tags=["Admin - Linked Accounts"])
+router = APIRouter(prefix="/linked-accounts", tags=["Admin - Linked Accounts"])
 
 @router.get("/", response_model=List[LinkedAccountResponse])
 async def get_all_linked_accounts(
     primary_customer_id: Optional[int] = Query(None, description="Filter by primary customer"),
     linked_phone: Optional[str] = Query(None, description="Filter by linked phone number"),
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -31,7 +29,7 @@ async def get_all_linked_accounts(
     if linked_phone:
         query = query.filter(LinkedAccount.linked_phone_number.ilike(f"%{linked_phone}%"))
     
-    linked_accounts = query.offset(skip).limit(limit).all()
+    linked_accounts = query.all()
     
     response_accounts = []
     for account in linked_accounts:
