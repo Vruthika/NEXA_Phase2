@@ -12,7 +12,7 @@ class CategoryResponse(CategoryBase):
     category_id: int
     category_name: str
 
-    created_at: Optional[datetime] = None  # Make optional
+    created_at: Optional[datetime] = None  
 
     class Config:
         from_attributes = True

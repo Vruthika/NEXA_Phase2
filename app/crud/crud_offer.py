@@ -84,7 +84,6 @@ class CRUDOffer:
         discount_factor = (100 - offer.discount_percentage) / 100
         discounted_price = float(plan.price) * discount_factor
         
-        # Round to 2 decimal places
         discounted_price = round(discounted_price, 2)
         
         # Convert string dates to datetime objects
@@ -149,16 +148,5 @@ class CRUDOffer:
             db.commit()
         return db_offer
     
-    # def calculate_discount_percentage(self, db: Session, offer_id: int):
-    #     offer = self.get(db, offer_id)
-    #     if not offer:
-    #         return None
-        
-    #     plan = db.query(Plan).filter(Plan.plan_id == offer.plan_id).first()
-    #     if not plan:
-    #         return None
-        
-    #     discount = ((float(plan.price) - float(offer.discounted_price)) / float(plan.price)) * 100
-    #     return round(discount, 2)
 
 crud_offer = CRUDOffer()

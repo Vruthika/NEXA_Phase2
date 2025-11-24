@@ -78,10 +78,9 @@ class CRUDBackupRestore:
     def get_essential_data(self, db: Session) -> Dict[str, Any]:
         """Get only essential data for backup (excluding logs, temporary data, etc.)"""
         
-        # Essential tables and their data
         essential_data = {}
         
-        # 1. Customers (essential info only)
+        # Customers (essential info only)
         customers = db.query(Customer).filter(Customer.deleted_at.is_(None)).all()
         essential_data['customers'] = [
             {
@@ -94,7 +93,7 @@ class CRUDBackupRestore:
             for c in customers
         ]
         
-        # 2. Plans (active plans only)
+        # Plans (active plans only)
         plans = db.query(Plan).filter(
             Plan.deleted_at.is_(None),
             Plan.status == 'active'
@@ -113,7 +112,7 @@ class CRUDBackupRestore:
             for p in plans
         ]
         
-        # 3. Categories
+        # Categories
         categories = db.query(Category).all()
         essential_data['categories'] = [
             {
@@ -124,7 +123,7 @@ class CRUDBackupRestore:
             for c in categories
         ]
         
-        # 4. Recent transactions (last 90 days only)
+        # Recent transactions (last 90 days only)
         ninety_days_ago = datetime.utcnow() - timedelta(days=90)
         transactions = db.query(Transaction).filter(
             Transaction.transaction_date >= ninety_days_ago
@@ -142,7 +141,7 @@ class CRUDBackupRestore:
             for t in transactions
         ]
         
-        # 5. Active subscriptions
+        # Active subscriptions
         active_subscriptions = db.query(Subscription).filter(
             Subscription.expiry_date > datetime.utcnow()
         ).all()
@@ -158,7 +157,6 @@ class CRUDBackupRestore:
             for s in active_subscriptions
         ]
         
-        # Add metadata
         essential_data['metadata'] = {
             'backup_timestamp': datetime.utcnow().isoformat(),
             'total_customers': len(essential_data['customers']),

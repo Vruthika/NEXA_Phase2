@@ -67,7 +67,6 @@ class ReferralApplyResponse(BaseModel):
     message: str
     discount_percentage: Optional[float] = None
 
-# ADD THE MISSING REFERRALCONFIG SCHEMA
 class ReferralConfig(BaseModel):
     referrer_discount_percentage: float = 30.0
     referee_discount_percentage: float = 10.0

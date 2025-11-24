@@ -69,6 +69,7 @@ async def shutdown_event():
     print("MongoDB connection closed")
 
 app.include_router(auth.router)
+
 # Customer-facing routes
 app.include_router(profile_router)
 app.include_router(plans_offers_router)

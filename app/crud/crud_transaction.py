@@ -111,7 +111,7 @@ class CRUDTransaction:
     def get_total_count(self, db: Session, filter: TransactionFilter):
         query = db.query(Transaction)
         
-        # Apply filters (same as get_all)
+        # Apply filters 
         if filter.customer_id:
             query = query.filter(Transaction.customer_id == filter.customer_id)
         

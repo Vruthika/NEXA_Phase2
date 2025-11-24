@@ -11,7 +11,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
     
     async def dispatch(self, request: Request, call_next) -> Response:
-        # Skip logging for health checks and docs
         if request.url.path in ['/health', '/docs', '/redoc', '/favicon.ico']:
             return await call_next(request)
         
@@ -29,7 +28,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 f"Client: {request.client.host if request.client else 'Unknown'}"
             )
             
-            # Add process time header
             response.headers["X-Process-Time"] = str(process_time)
             
             return response

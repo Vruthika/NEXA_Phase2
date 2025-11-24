@@ -1,4 +1,3 @@
-# app/routes/admin_analytics.py - ENHANCED VERSION
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, desc, text
@@ -106,7 +105,6 @@ def get_enhanced_revenue_trend(db: Session, period: str = "daily", days: int = 3
     start_date = end_date - timedelta(days=days)
     
     try:
-        # Try to get real data first
         if period == "daily":
             revenue_data = db.execute(text("""
                 SELECT 
@@ -131,16 +129,14 @@ def get_enhanced_revenue_trend(db: Session, period: str = "daily", days: int = 3
                     })
                 return result
         
-        # If no data found, return sample data for demonstration
         sample_data = []
         current = start_date
         for i in range(days):
             date_str = current.strftime('%Y-%m-%d')
-            # Generate realistic sample data based on period
-            base_revenue = 1000 + (i * 50)  # Increasing trend
-            variance = (i % 7) * 200  # Weekly pattern
+            base_revenue = 1000 + (i * 50)  
+            variance = (i % 7) * 200  
             revenue = max(500, base_revenue + variance)
-            transactions = max(1, (i % 5) + 2)  # 2-6 transactions
+            transactions = max(1, (i % 5) + 2)  
             
             sample_data.append({
                 "date": date_str,
@@ -153,7 +149,6 @@ def get_enhanced_revenue_trend(db: Session, period: str = "daily", days: int = 3
     
     except Exception as e:
         print(f"Error in enhanced revenue trend: {e}")
-        # Fallback sample data
         return [
             {"date": "2025-11-14", "revenue": 2500.0, "transactions": 5},
             {"date": "2025-11-15", "revenue": 3070.4, "transactions": 6},
@@ -211,13 +206,12 @@ def get_enhanced_referral_trend(db: Session, days: int = 30):
                 })
             return result
         
-        # If no data found, return sample data
         sample_data = []
         current = start_date
-        for i in range(min(days, 30)):  # Limit to 30 sample points
+        for i in range(min(days, 30)):  
             date_str = current.strftime('%Y-%m-%d')
-            new_refs = (i % 7) + 1  # 1-7 new referrals
-            successful = max(0, new_refs - (i % 3))  # Some successful
+            new_refs = (i % 7) + 1  
+            successful = max(0, new_refs - (i % 3)) 
             
             sample_data.append({
                 "date": date_str,
@@ -249,7 +243,7 @@ async def get_plan_performance(
     return get_simplified_plan_performance(db, limit)
 
 # ==========================================================
-# ENHANCED HELPER FUNCTIONS WITH REFERRAL TREND
+# HELPER FUNCTIONS WITH REFERRAL TREND
 # ==========================================================
 
 def get_simplified_revenue_trend(db: Session, period: str = "daily", days: int = 30):

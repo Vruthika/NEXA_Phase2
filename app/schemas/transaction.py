@@ -1,4 +1,3 @@
-# app/schemas/transaction.py
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
@@ -20,8 +19,6 @@ class TransactionBase(BaseModel):
 class TransactionResponse(TransactionBase):
     transaction_id: int
     transaction_date: datetime
-    
-    # Include related data
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     plan_name: Optional[str] = None

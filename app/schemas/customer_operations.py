@@ -75,7 +75,6 @@ class PlanResponseForCustomer(BaseModel):
     sms_allowance: Optional[int] = None
     benefits: Optional[List[str]] = None
     is_featured: bool
-    # Offer fields
     has_active_offer: bool = False
     offer_id: Optional[int] = None
     offer_price: Optional[float] = None

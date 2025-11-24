@@ -585,23 +585,20 @@ async def export_transactions(
     Export all transactions as CSV file.
     """
     # Create an empty filter to get all transactions
-    filter_params = TransactionFilter()  # This will create a filter with all None values
+    filter_params = TransactionFilter() 
     
     # Get all transactions without any filtering
     transactions_with_details = crud_transaction.get_all_with_details(db, filter=filter_params)
     
-    # Create CSV content
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write header
     writer.writerow([
         "Transaction ID", "Customer", "Customer Phone", "Plan", "Offer",
         "Transaction Type", "Original Amount", "Discount", "Final Amount",
         "Payment Method", "Payment Status", "Transaction Date"
     ])
     
-    # Write data
     for transaction, cust_name, cust_phone, plan_name, offer_name in transactions_with_details:
         writer.writerow([
             transaction.transaction_id,
@@ -648,9 +645,9 @@ async def get_active_subscriptions(
     current_time = datetime.utcnow()
     
     query = db.query(Subscription).filter(
-        Subscription.activation_date.isnot(None),  # Must be activated
-        Subscription.activation_date <= current_time,  # Activation date has passed
-        Subscription.expiry_date > current_time  # Not expired yet
+        Subscription.activation_date.isnot(None),  
+        Subscription.activation_date <= current_time,  
+        Subscription.expiry_date > current_time 
     )
     
     if customer_id:
@@ -693,7 +690,7 @@ async def get_activation_queue(
     """
     # Only get unprocessed queue items
     query = db.query(SubscriptionActivationQueue).filter(
-        SubscriptionActivationQueue.processed_at.is_(None)  # Only unprocessed items
+        SubscriptionActivationQueue.processed_at.is_(None)   
     )
     
     if customer_id:
@@ -801,146 +798,6 @@ async def get_customer_stats(
     """
     stats = crud_customer.get_customer_stats(db)
     return CustomerStatsResponse(**stats)
-
-@customer_router.post("/{customer_id}/deactivate")
-async def deactivate_customer(
-    customer_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Deactivate a customer account.
-    """
-    customer = crud_customer.deactivate_account(db, customer_id)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    return {"message": "Customer account deactivated successfully", "customer_id": customer_id}
-'''
-@customer_router.get("/{customer_id}/transactions")
-async def get_customer_transactions(
-    customer_id: int,
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Get transaction history for a customer.
-    """
-    # Verify customer exists
-    customer = crud_customer.get_by_id(db, customer_id)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    transactions = crud_customer.get_customer_transactions(db, customer_id, skip=skip, limit=limit)
-    
-    # Enhance with plan and offer details
-    enhanced_transactions = []
-    for transaction in transactions:
-        plan = db.query(Plan).filter(Plan.plan_id == transaction.plan_id).first()
-        offer = db.query(Offer).filter(Offer.offer_id == transaction.offer_id).first() if transaction.offer_id else None
-        
-        enhanced_transactions.append({
-            "transaction_id": transaction.transaction_id,
-            "plan_name": plan.plan_name if plan else "Unknown",
-            "offer_name": offer.offer_name if offer else None,
-            "recipient_phone_number": transaction.recipient_phone_number,
-            "transaction_type": transaction.transaction_type.value,
-            "original_amount": float(transaction.original_amount),
-            "discount_amount": float(transaction.discount_amount),
-            "final_amount": float(transaction.final_amount),
-            "payment_method": transaction.payment_method.value,
-            "payment_status": transaction.payment_status.value,
-            "transaction_date": transaction.transaction_date
-        })
-    
-    return enhanced_transactions
-
-@customer_router.get("/{customer_id}/subscriptions")
-async def get_customer_subscriptions(
-    customer_id: int,
-    skip: int = Query(0, description="Skip records"),
-    limit: int = Query(100, description="Limit records"),
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Get subscription history for a customer.
-    """
-    # Verify customer exists
-    customer = crud_customer.get_by_id(db, customer_id)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    subscriptions = crud_customer.get_customer_subscriptions(db, customer_id, skip=skip, limit=limit)
-    
-    # Enhance with plan details
-    enhanced_subscriptions = []
-    for subscription in subscriptions:
-        plan = db.query(Plan).filter(Plan.plan_id == subscription.plan_id).first()
-        
-        enhanced_subscriptions.append({
-            "subscription_id": subscription.subscription_id,
-            "plan_name": plan.plan_name if plan else "Unknown",
-            "phone_number": subscription.phone_number,
-            "is_topup": subscription.is_topup,
-            "activation_date": subscription.activation_date,
-            "expiry_date": subscription.expiry_date,
-            "data_balance_gb": float(subscription.data_balance_gb) if subscription.data_balance_gb else None,
-            "daily_data_limit_gb": float(subscription.daily_data_limit_gb) if subscription.daily_data_limit_gb else None,
-            "daily_data_used_gb": float(subscription.daily_data_used_gb) if subscription.daily_data_used_gb else None,
-            "status": "active" if subscription.expiry_date > datetime.utcnow() else "expired",
-            "created_at": subscription.created_at
-        })
-    
-    return enhanced_subscriptions
-
-@customer_router.get("/{customer_id}/queue")
-async def get_customer_queued_subscriptions(
-    customer_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_db)
-):
-    """
-    Get queued subscriptions for a customer.
-    """
-    # Verify customer exists
-    customer = crud_customer.get_by_id(db, customer_id)
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found"
-        )
-    
-    queue_items = crud_customer.get_customer_queued_subscriptions(db, customer_id)
-    
-    enhanced_queue = []
-    for item in queue_items:
-        plan = db.query(Plan).filter(Plan.plan_id == item.subscription.plan_id).first()
-        
-        enhanced_queue.append({
-            "queue_id": item.queue_id,
-            "subscription_id": item.subscription_id,
-            "plan_name": plan.plan_name if plan else "Unknown",
-            "phone_number": item.phone_number,
-            "queue_position": item.queue_position,
-            "expected_activation_date": item.expected_activation_date,
-            "expected_expiry_date": item.expected_expiry_date,
-            "created_at": item.created_at
-        })
-    
-    return enhanced_queue
-'''
 
 @customer_router.post("/{customer_id}/deactivate")
 async def deactivate_customer(

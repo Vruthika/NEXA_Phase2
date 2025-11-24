@@ -1,4 +1,3 @@
-# app/services/background_tasks.py
 import asyncio
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -45,7 +44,7 @@ async def check_upcoming_expiries(db: Session):
     upcoming_expiries = db.query(Subscription).filter(
         Subscription.expiry_date <= expiry_threshold,
         Subscription.expiry_date > current_time,
-        Subscription.activation_date.isnot(None)  # Only activated ones
+        Subscription.activation_date.isnot(None) 
     ).all()
     
     for subscription in upcoming_expiries:
@@ -87,7 +86,7 @@ async def check_low_data_balance(db: Session):
     # Check subscriptions with low data balance (< 200MB = 0.2GB)
     low_balance_subs = db.query(Subscription).filter(
         Subscription.data_balance_gb.isnot(None),
-        Subscription.data_balance_gb < 0.2,  # Less than 200MB
+        Subscription.data_balance_gb < 0.2,  
         Subscription.expiry_date > current_time
     ).all()
     
@@ -97,7 +96,7 @@ async def check_low_data_balance(db: Session):
         automated_notifications.trigger_low_balance_notification(
             db,
             subscription.customer_id,
-            balance_mb  # Pass MB value instead of GB
+            balance_mb 
         )
         print(f"⚠️ Sent low balance notification for subscription {subscription.subscription_id}: {balance_mb:.0f}MB")
     
@@ -113,7 +112,7 @@ async def check_low_data_balance(db: Session):
         automated_notifications.trigger_low_balance_notification(
             db,
             activation.customer_id,
-            balance_mb  # Pass MB value instead of GB
+            balance_mb   
         )
         print(f"⚠️ Sent low balance notification for postpaid activation {activation.activation_id}: {balance_mb:.0f}MB")
         

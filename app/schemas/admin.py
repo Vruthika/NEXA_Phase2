@@ -17,8 +17,8 @@ class AdminUpdate(BaseModel):
 
 class AdminResponse(AdminBase):
     admin_id: int
-    created_at: Optional[datetime] = None  # Make optional
-    updated_at: Optional[datetime] = None  # Make optional
+    created_at: Optional[datetime] = None  
+    updated_at: Optional[datetime] = None  
 
     class Config:
         from_attributes = True

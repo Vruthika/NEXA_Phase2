@@ -86,12 +86,6 @@ class CRUDCustomer:
         if filter.account_status:
             query = query.filter(Customer.account_status == filter.account_status)
         
-        # if filter.days_inactive_min is not None:
-        #     query = query.filter(Customer.days_inactive >= filter.days_inactive_min)
-        
-        # if filter.days_inactive_max is not None:
-        #     query = query.filter(Customer.days_inactive <= filter.days_inactive_max)
-        
         return query.order_by(Customer.created_at.desc()).offset(skip).limit(limit).all()
     
     def get_customer_details(self, db: Session, customer_id: int):

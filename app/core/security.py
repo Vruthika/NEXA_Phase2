@@ -57,7 +57,6 @@ def verify_token(token: str, db: Optional[Any] = None) -> Optional[Dict]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         
-        # If db is provided, check if token is blacklisted
         if db:
             from app.models.models import BlacklistedToken
             blacklisted = db.query(BlacklistedToken).filter(

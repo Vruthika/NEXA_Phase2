@@ -68,8 +68,8 @@ class PlanResponse(PlanBase):
     max_secondary_numbers: int = 0
     is_featured: bool
     status: str
-    created_at: Optional[datetime] = None  # Make optional
-    updated_at: Optional[datetime] = None  # Make optional
+    created_at: Optional[datetime] = None   
+    updated_at: Optional[datetime] = None  
 
     class Config:
         from_attributes = True

@@ -1,4 +1,3 @@
-# app/crud/crud_notification.py
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import datetime, timedelta

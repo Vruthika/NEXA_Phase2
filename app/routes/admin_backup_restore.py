@@ -122,7 +122,6 @@ async def restore_from_backup(
             detail="Backup not found"
         )
     
-    # Add confirmation mechanism in production - for now we'll simulate restoration
     result = backup_service.perform_restore(db, current_admin.admin_id, backup_id)
     
     if not result['success']:
@@ -131,13 +130,13 @@ async def restore_from_backup(
             detail=result['error']
         )
     
-    # Create restore record - now passing all 4 required parameters
+    # Create restore record 
     restore = crud_backup_restore.create_restore(
         db, 
         current_admin.admin_id, 
-        backup_id,  # backup_id parameter
-        backup.file_name,  # file_name parameter
-        {  # data_list parameter
+        backup_id,  
+        backup.file_name,  
+        {  
             'tables_to_restore': result.get('tables_to_restore', []),
             'record_counts': result.get('record_counts', {}),
             'backup_source_id': backup_id

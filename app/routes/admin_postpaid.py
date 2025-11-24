@@ -87,8 +87,7 @@ async def get_postpaid_activations(
         
         return [response_data]
     
-    # If no activation_id provided, return all activations with filtering
-    # If no status filter provided, default to showing only active activations
+
     if status is None:
         status = PostpaidStatus.active
     

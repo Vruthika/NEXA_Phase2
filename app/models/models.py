@@ -85,9 +85,7 @@ class NotificationChannel(str, enum.Enum):
     sms = "sms"
     push = "push"
 
-class PostpaidSuspensionRequest(str, enum.Enum):
-    suspension="suspension"
-    resumption="resumption"   
+   
 
 
 # TABLE MODELS
@@ -105,8 +103,8 @@ class Customer(Base):
     days_inactive = Column(Integer, default=0)
     inactivity_status_updated_at = Column(DateTime)
     deleted_at = Column(DateTime)
-    created_at = Column(DateTime, server_default=func.now())  # Change back
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())  # Change back
+    created_at = Column(DateTime, server_default=func.now())  
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())  
     
     # Relationships
     transactions = relationship("Transaction", back_populates="customer")
@@ -164,8 +162,8 @@ class Admin(Base):
     phone_number = Column(String(20), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    created_at = Column(DateTime, server_default=func.now())  # Change back
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())  # Change back
+    created_at = Column(DateTime, server_default=func.now())  
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())  
     
     # Relationships
     backups = relationship("Backup", back_populates="admin")
@@ -368,7 +366,6 @@ class PostpaidActivation(Base):
     plan = relationship("Plan", back_populates="postpaid_activations")
     secondary_numbers = relationship("PostpaidSecondaryNumber", back_populates="postpaid_activation", cascade="all, delete-orphan")
     data_addons = relationship("PostpaidDataAddon", back_populates="postpaid_activation")
-    suspension_requests = relationship("PostpaidSuspensionRequest", back_populates="activation")
 
 
 class PostpaidSecondaryNumber(Base):
@@ -400,25 +397,6 @@ class PostpaidDataAddon(Base):
     
     # Relationships
     postpaid_activation = relationship("PostpaidActivation", back_populates="data_addons")
-
-
-class PostpaidSuspensionRequest(Base):
-    __tablename__ = "postpaid_suspension_requests"
-
-    request_id = Column(BigInteger, primary_key=True, autoincrement=True)
-    activation_id = Column(BigInteger, ForeignKey("postpaid_activations.activation_id"), nullable=False)
-    request_type = Column(Enum('suspension', 'resumption'), nullable=False)  # suspension or resumption
-    reason = Column(Text)
-    status = Column(Enum('pending', 'approved', 'rejected'), default='pending')
-    requested_by_customer_id = Column(BigInteger, ForeignKey("customers.customer_id"), nullable=False)
-    processed_by_admin_id = Column(BigInteger, ForeignKey("admins.admin_id"))
-    processed_at = Column(DateTime)
-    created_at = Column(DateTime, server_default=func.now())
-    
-    # Relationships
-    activation = relationship("PostpaidActivation", back_populates="suspension_requests")
-    customer = relationship("Customer", foreign_keys=[requested_by_customer_id])
-    admin = relationship("Admin", foreign_keys=[processed_by_admin_id])
 
 
 class ReferralProgram(Base):
@@ -541,5 +519,4 @@ class BlacklistedToken(Base):
     blacklisted_at = Column(DateTime, server_default=func.now())
     reason = Column(String(100), default='logout')
     
-    # Index for faster lookups
     __table_args__ = (Index('idx_blacklisted_token', 'token'),)

@@ -1,4 +1,3 @@
-# app/crud/crud_token.py
 from sqlalchemy.orm import Session
 from app.models.models import BlacklistedToken
 from datetime import datetime

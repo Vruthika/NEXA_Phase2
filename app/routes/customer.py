@@ -16,7 +16,7 @@ from app.services.automated_notifications import automated_notifications
 
 
 # ==========================================================
-# 👤 CUSTOMER PROFILE MANAGEMENT
+# CUSTOMER PROFILE MANAGEMENT
 # ==========================================================
 profile_router = APIRouter(prefix="/customer", tags=["Customer Profile"])
 
@@ -44,7 +44,6 @@ async def get_customer_profile(
         current_customer.inactivity_status_updated_at = current_time
         db.commit()
     
-    # Refresh to get updated data
     db.refresh(current_customer)
     
     print(f"DEBUG: Customer {current_customer.customer_id} - last_active_plan_date: {current_customer.last_active_plan_date}")
@@ -100,7 +99,7 @@ async def change_customer_password(
 
 
 # ==========================================================
-# 📋 PLANS & OFFERS VIEWING
+# PLANS & OFFERS VIEWING
 # ==========================================================
 plans_offers_router = APIRouter(prefix="/customer", tags=["View Plans & Offers"])
 
@@ -285,7 +284,7 @@ async def get_offers_for_customer(
 
 
 # ==========================================================
-# 🔄 RECHARGE FUNCTIONALITY
+# RECHARGE FUNCTIONALITY
 # ==========================================================
 recharge_router = APIRouter(prefix="/customer", tags=["Recharge"])
 
@@ -402,10 +401,9 @@ async def create_recharge(
     previous_recharges = db.query(Transaction).filter(
         Transaction.customer_id == current_customer.customer_id,
         Transaction.payment_status == "success",
-        Transaction.transaction_id != transaction.transaction_id  # Exclude current transaction
+        Transaction.transaction_id != transaction.transaction_id  
     ).count()
 
-    # If this is the first recharge, complete any pending referrals for this customer
     if previous_recharges == 0:
         print(f"DEBUG: First recharge for customer {current_customer.customer_id}, checking for pending referrals...")
         
@@ -427,7 +425,6 @@ async def create_recharge(
         Subscription.expiry_date > current_time
     ).order_by(Subscription.expiry_date.desc()).all()
     
-    # Handle topup plans differently - they should always activate immediately
     if plan.is_topup:
         # For topup plans, activate immediately regardless of existing subscriptions
         activation_date = current_time
@@ -501,16 +498,12 @@ async def create_recharge(
         message = "Recharge successful! Your plan is now active." + referral_message
         
     else:
-        # Active subscription exists for regular plans - add to queue
-        # Filter only BASE plans (not topups) to determine activation date
         base_plans = [sub for sub in active_subscriptions if not sub.is_topup]
         
         if base_plans:
-            # Use the latest base plan expiry for activation
-            latest_active_base_plan = base_plans[0]  # Already ordered by expiry_date desc
+            latest_active_base_plan = base_plans[0]  
             activation_date = latest_active_base_plan.expiry_date
         else:
-            # If no base plans found (shouldn't happen in normal flow), activate immediately
             activation_date = current_time
             
         expiry_date = activation_date + timedelta(days=plan.validity_days)
@@ -522,12 +515,12 @@ async def create_recharge(
             plan_id=recharge_data.plan_id,
             transaction_id=transaction.transaction_id,
             is_topup=plan.is_topup,
-            activation_date=activation_date,  # Set to when current base plan expires
+            activation_date=activation_date,  
             expiry_date=expiry_date,
             data_balance_gb=float(plan.data_allowance_gb) if plan.data_allowance_gb else None,
             daily_data_limit_gb=float(plan.daily_data_limit_gb) if plan.daily_data_limit_gb else None,
             daily_data_used_gb=0.0,
-            last_daily_reset=activation_date  # Will reset when activated
+            last_daily_reset=activation_date  
         )
         
         db.add(subscription)
@@ -536,7 +529,6 @@ async def create_recharge(
         
         # Only add BASE plans to activation queue (not topups)
         if not plan.is_topup:
-            # Get next queue position
             queue_position = subscription_service.get_next_queue_position(
                 db, current_customer.customer_id, recharge_data.recipient_phone_number
             )
@@ -561,10 +553,8 @@ async def create_recharge(
             
             message = f"Recharge successful! Your plan is queued (position {queue_position}) and will activate when your current plan expires on {activation_date.strftime('%d %b %Y')}." + referral_message
         else:
-            # This shouldn't happen as topups are handled above, but just in case
             message = "Recharge successful! Your topup has been processed." + referral_message
     
-    # Refresh to get updated data
     db.refresh(current_customer)
     
     return RechargeResponse(
@@ -576,7 +566,7 @@ async def create_recharge(
     )
 
 # ==========================================================
-# 💳 TRANSACTION HISTORY
+# TRANSACTION HISTORY
 # ==========================================================
 transaction_router = APIRouter(prefix="/customer", tags=["View Transactions"])
 
@@ -640,7 +630,7 @@ async def get_customer_transactions(
     return response_transactions
 
 # ==========================================================
-# 📱 SUBSCRIPTION MANAGEMENT
+# SUBSCRIPTION MANAGEMENT
 # ==========================================================
 subscriptions_router = APIRouter(prefix="/customer", tags=["View Subscriptions"])
 
@@ -662,10 +652,10 @@ async def get_customer_active_subscriptions(current_customer: Customer = Depends
         Plan, Subscription.plan_id == Plan.plan_id
     ).filter(
         Subscription.customer_id == current_customer.customer_id,
-        Subscription.activation_date.isnot(None),  # Must be activated
-        Subscription.activation_date <= current_time,  # Activation date has passed
-        Subscription.expiry_date > current_time  # Not expired yet
-    ).order_by(Subscription.expiry_date.asc()).all()  # Order by expiry date
+        Subscription.activation_date.isnot(None),  
+        Subscription.activation_date <= current_time,  
+        Subscription.expiry_date > current_time  
+    ).order_by(Subscription.expiry_date.asc()).all()  
     
     response_subscriptions = []
     for subscription in subscriptions:
@@ -694,7 +684,6 @@ async def get_customer_queued_subscriptions(
     """
     from app.services.subscription_service import subscription_service
     
-    # Process expired subscriptions before returning data
     subscription_service.process_expired_subscriptions(db)
     
     # Only get unprocessed queue items
@@ -704,7 +693,7 @@ async def get_customer_queued_subscriptions(
         Plan, Subscription.plan_id == Plan.plan_id
     ).filter(
         SubscriptionActivationQueue.customer_id == current_customer.customer_id,
-        SubscriptionActivationQueue.processed_at.is_(None)  # Only unprocessed items
+        SubscriptionActivationQueue.processed_at.is_(None)  
     ).order_by(SubscriptionActivationQueue.queue_position).all()
     
     response_queue = []

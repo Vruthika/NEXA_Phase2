@@ -1,4 +1,3 @@
-# app/services/automated_notifications.py
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app.models.models import NotificationType, NotificationChannel
@@ -93,5 +92,4 @@ class AutomatedNotifications:
             db, customer_id, NotificationType.daily_limit_reached, title, message, "sms"
         )
 
-# Global instance
 automated_notifications = AutomatedNotifications()

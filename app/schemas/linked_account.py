@@ -20,8 +20,6 @@ class LinkedAccountResponse(BaseModel):
     linked_phone_number: str
     linked_customer_id: Optional[int] = None
     created_at: datetime
-    
-    # Additional details
     primary_customer_name: Optional[str] = None
     linked_customer_name: Optional[str] = None
     is_registered_user: bool = False
@@ -30,7 +28,6 @@ class LinkedAccountResponse(BaseModel):
         from_attributes = True
 
 class LinkedAccountDetailResponse(LinkedAccountResponse):
-    # Subscription details for the linked number
     active_subscriptions: List[dict] = []
     total_spent: float = 0.0
 

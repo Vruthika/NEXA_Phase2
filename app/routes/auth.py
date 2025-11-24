@@ -187,7 +187,7 @@ async def customer_register(customer_data: CustomerRegister, db: Session = Depen
         referral_program, error = crud_referral.use_referral_code(
             db, 
             customer_data.referral_code, 
-            customer.customer_id,  # Pass the actual customer ID
+            customer.customer_id, 
             customer.phone_number
         )
         

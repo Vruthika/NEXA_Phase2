@@ -28,7 +28,7 @@ class CRUDReferral:
         ).first()
 
     def create_referral_program(self, db: Session, customer_id: int):
-        """Create a new referral program for a customer - STEP 1"""
+        """Create a new referral program for a customer"""
         # Check if customer already has an active referral program
         existing = self.get_referral_by_customer(db, customer_id)
         if existing:
@@ -54,7 +54,7 @@ class CRUDReferral:
         return referral_program, None
 
     def use_referral_code(self, db: Session, referral_code: str, referee_customer_id: int, referee_phone_number: str):
-        """Use a referral code - STEP 2"""
+        """Use a referral code"""
         referral_program = self.get_referral_by_code(db, referral_code)
         if not referral_program:
             return None, "Invalid referral code"
@@ -95,7 +95,7 @@ class CRUDReferral:
         referral_program.referee_phone_number = referee_phone_number
         referral_program.referee_customer_id = referee_customer_id  # Set referee customer ID immediately
 
-        # Create referral usage log - STEP 2
+        # Create referral usage log 
         usage_log = ReferralUsageLog(
             referral_id=referral_program.referral_id,
             used_by_phone=referee_phone_number,
@@ -117,7 +117,7 @@ class CRUDReferral:
         return referral_program, None
     
     def complete_referral(self, db: Session, referee_customer_id: int, referee_phone_number: str):
-        """Complete referral when referee does first recharge - STEP 3"""
+        """Complete referral when referee does first recharge """
         # Find referral program for this referee
         referral_program = db.query(ReferralProgram).filter(
             ReferralProgram.referee_phone_number == referee_phone_number,

@@ -1,4 +1,3 @@
-# app/schemas/offer.py
 from pydantic import BaseModel, validator, field_validator
 from datetime import datetime, date
 from typing import Optional
@@ -14,8 +13,8 @@ class OfferBase(BaseModel):
     offer_name: str
     description: Optional[str] = None
     discounted_price: float
-    valid_from: str  # String for input
-    valid_until: str  # String for input
+    valid_from: str   
+    valid_until: str  
 
     @validator('valid_from', 'valid_until', pre=True)
     def validate_date_format(cls, v):

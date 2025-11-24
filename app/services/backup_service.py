@@ -10,12 +10,11 @@ from app.config import settings
 class BackupService:
     def __init__(self):
         self.backup_dir = "backups"
-        self.max_backups = getattr(settings, 'MAX_BACKUPS', 50)  # Keep last 50 backups
+        self.max_backups = getattr(settings, 'MAX_BACKUPS', 50) 
         
     def perform_backup(self, db: Session, admin_id: int, backup_type: str = "manual") -> Dict[str, Any]:
         """Perform a complete system backup"""
         try:
-            # Get essential data
             essential_data = crud_backup_restore.get_essential_data(db)
             
             # Create backup record
@@ -75,9 +74,9 @@ class BackupService:
             restore = crud_backup_restore.create_restore(
                 db, 
                 admin_id, 
-                backup_id,  # backup_id
-                backup.file_name,  # file_name
-                {  # data_list
+                backup_id, 
+                backup.file_name, 
+                {  
                     'tables_to_restore': list(backup_data.keys()),
                     'record_counts': backup_data['metadata']
                 }
@@ -98,7 +97,7 @@ class BackupService:
     def _cleanup_old_backups(self, db: Session):
         """Remove old backups beyond the maximum limit"""
         try:
-            all_backups = crud_backup_restore.get_all_backups(db, limit=1000)  # Get all backups
+            all_backups = crud_backup_restore.get_all_backups(db, limit=1000) 
             
             if len(all_backups) > self.max_backups:
                 # Keep the most recent backups, delete the oldest ones
@@ -115,9 +114,8 @@ class BackupService:
                         if os.path.exists(zip_path):
                             os.remove(zip_path)
                     except OSError:
-                        pass  # File might already be deleted
+                        pass  
                     
-                    # Delete database record
                     db.delete(backup)
                 
                 db.commit()

@@ -1,4 +1,3 @@
-# app/services/notification_service.py
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
@@ -7,7 +6,6 @@ from app.models.models import Notification, NotificationChannel, Customer
 from app.crud.crud_notification import crud_notification
 from app.schemas.notification import NotificationCreate
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 class NotificationService:
@@ -59,7 +57,6 @@ class NotificationService:
             # Format message based on notification type
             sms_message = self._format_sms_message(notification, provider, formatted_time)
             
-            # SIMPLIFIED DESIGN - Cleaner, more professional look
             print("\n" + "─" * 40)
             print(f"📱 SMS from {provider}")
             print("─" * 40)
@@ -71,7 +68,6 @@ class NotificationService:
             print("✅ Delivered")
             print("─" * 40 + "\n")
             
-            # Log to file as well
             logger.info(f"SMS Simulation - Provider: {provider}, To: {customer.phone_number}, "
                     f"Time: {formatted_time}, Message: {notification.message}")
             
@@ -91,7 +87,6 @@ class NotificationService:
     def _format_sms_message(self, notification: Notification, provider: str, time: str) -> str:
         """Format notification message in telecom SMS style"""
         
-        # Different formats for different notification types
         if notification.type.value == "payment_success":
             return f"""Dear Customer,
 
@@ -149,7 +144,6 @@ Please pay to avoid late charges.
 - {provider}"""
 
         else:
-            # Default format for other notifications
             return f"""Dear Customer,
 
 {notification.message}
@@ -167,8 +161,6 @@ Please pay to avoid late charges.
     def _send_push_notification(self, db: Session, notification: Notification, customer: Customer):
         """Send real push notification"""
         try:
-            # TODO: Integrate with actual push notification service (FCM/APNs)
-            # For now, we'll simulate success but log it
             
             logger.info(f"PUSH Notification - To: {customer.customer_id}, "
                        f"Customer: {customer.full_name}, "
@@ -223,5 +215,4 @@ Please pay to avoid late charges.
         
         return self.create_and_send_notification(db, notification_data)
 
-# Global instance
 notification_service = NotificationService()

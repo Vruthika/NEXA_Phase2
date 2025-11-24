@@ -114,7 +114,7 @@ class CRUDPostpaid:
 
         print(f"DEBUG: Found {len(secondary_activations_by_customer_id)} secondary activations by customer_id")
 
-        # Also get activations where the phone number matches (even if customer_id is not set)
+        # get activations where the phone number matches (even if customer_id is not set)
         secondary_activations_by_phone = db.query(PostpaidActivation).join(
             PostpaidSecondaryNumber,
             PostpaidActivation.activation_id == PostpaidSecondaryNumber.activation_id

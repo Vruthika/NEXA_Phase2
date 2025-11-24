@@ -16,7 +16,6 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
             
         except HTTPException as http_exc:
-            # FastAPI HTTPExceptions are already handled
             raise http_exc
             
         except ValidationError as e:

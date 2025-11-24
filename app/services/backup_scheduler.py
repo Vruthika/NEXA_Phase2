@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, time, timedelta  # ADDED: timedelta import
+from datetime import datetime, time, timedelta  
 from typing import Dict, Any
 from sqlalchemy.orm import Session
 from app.services.backup_service import backup_service
@@ -68,7 +68,7 @@ class BackupScheduler:
             if now.day == 1 and now.time() < backup_time:
                 next_run = datetime.combine(today, backup_time)
             else:
-                next_month = today.replace(day=28) + timedelta(days=4)  # Get to next month
+                next_month = today.replace(day=28) + timedelta(days=4) 
                 next_month = next_month.replace(day=1)
                 next_run = datetime.combine(next_month, backup_time)
         
@@ -84,7 +84,7 @@ class BackupScheduler:
         
         while self.is_running:
             await self._check_schedule()
-            await asyncio.sleep(60)  # Check every minute
+            await asyncio.sleep(60)
     
     async def stop(self):
         """Stop the backup scheduler"""
@@ -101,7 +101,7 @@ class BackupScheduler:
         if self.schedule['next_run'] and now >= self.schedule['next_run']:
             print(f"Running scheduled {self.schedule['frequency']} backup...")
             
-            # Perform backup (using a default admin ID for automated backups)
+            # Perform backup 
             try:
                 db = next(get_db())
                 result = backup_service.perform_backup(db, admin_id=1, backup_type='auto')
@@ -137,5 +137,4 @@ class BackupScheduler:
             'next_run': self.schedule['next_run'].isoformat() if self.schedule['next_run'] else 'Not scheduled'
         }
 
-# Global scheduler instance
 backup_scheduler = BackupScheduler()

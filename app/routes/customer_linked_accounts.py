@@ -201,10 +201,10 @@ async def recharge_linked_account(
     
     # Create transaction for the linked number
     transaction = Transaction(
-        customer_id=current_customer.customer_id,  # Primary customer pays
+        customer_id=current_customer.customer_id,  
         plan_id=recharge_data.plan_id,
         offer_id=recharge_data.offer_id if recharge_data.offer_id and recharge_data.offer_id > 0 else None,
-        recipient_phone_number=linked_account.linked_phone_number,  # Linked number receives recharge
+        recipient_phone_number=linked_account.linked_phone_number, 
         transaction_type="prepaid_recharge",
         original_amount=original_amount,
         discount_amount=discount_amount,
@@ -217,7 +217,6 @@ async def recharge_linked_account(
     db.commit()
     db.refresh(transaction)
     
-    # Handle subscription creation (similar to regular recharge)
     from app.services.subscription_service import subscription_service
     from datetime import timedelta
     
@@ -230,7 +229,6 @@ async def recharge_linked_account(
     ).order_by(Subscription.expiry_date.desc()).all()
     
     if plan.is_topup or not active_subscriptions:
-        # For topup plans or no active subscription - activate immediately
         activation_date = current_time
         expiry_date = current_time + timedelta(days=plan.validity_days)
         
@@ -254,7 +252,6 @@ async def recharge_linked_account(
         message = f"Recharge successful for {linked_account.linked_phone_number}! Plan activated immediately."
         
     else:
-        # Active subscription exists - add to queue
         latest_active_subscription = active_subscriptions[0]
         activation_date = latest_active_subscription.expiry_date
         expiry_date = activation_date + timedelta(days=plan.validity_days)

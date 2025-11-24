@@ -1,4 +1,3 @@
-# app/schemas/notification.py
 from pydantic import BaseModel, validator
 from datetime import datetime
 from typing import List, Optional, Union
