@@ -1,4 +1,1 @@
 .env
-app/routes/admin_report.py
-app/schemas/report.py
-app/services/report_service.py

@@ -21,7 +21,6 @@ from app.routes.admin_referral import router as admin_referral_router
 from app.routes.customer_notifications import router as customer_notifications_router
 from app.routes.admin_notifications import router as admin_notifications_router
 from app.routes.admin_analytics import router as analytics_router
-from app.routes.admin_report import router as reports_router
 from app.routes.admin_backup_restore import router as backup_restore_router
 from app.routes.admin_cms import router as admin_cms_router
 from app.routes.customer_cms import router as customer_cms_router
